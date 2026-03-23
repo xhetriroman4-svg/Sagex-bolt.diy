@@ -7,7 +7,7 @@ import type { ITerminal } from '~/types/terminal';
 import { unreachable } from '~/utils/unreachable';
 import { EditorStore } from './editor';
 import { FilesStore, type FileMap } from './files';
-import { PreviewsStore } from './previews';
+import { getPreviewsStore } from './previews';
 import { TerminalStore } from './terminal';
 import JSZip from 'jszip';
 import fileSaver from 'file-saver';
@@ -36,7 +36,7 @@ type Artifacts = MapStore<Record<string, ArtifactState>>;
 export type WorkbenchViewType = 'code' | 'diff' | 'preview';
 
 export class WorkbenchStore {
-  #previewsStore = new PreviewsStore(webcontainer);
+  #previewsStore = getPreviewsStore(); // Use singleton instead of creating new instance
   #filesStore = new FilesStore(webcontainer);
   #editorStore = new EditorStore(this.#filesStore);
   #terminalStore = new TerminalStore(webcontainer);
@@ -595,6 +595,23 @@ export class WorkbenchStore {
         await artifact.runner.runAction(data);
         this.resetAllFileModifications();
       }
+    } else if (data.action.type === 'start') {
+      // Handle start action - automatically switch to preview after dev server starts
+      await artifact.runner.runAction(data);
+
+      /*
+       * Wait a moment for the server to be ready, then switch to preview
+       * The PreviewsStore will capture the server-ready event and update the previews
+       */
+      setTimeout(() => {
+        const previews = this.#previewsStore.previews.get();
+
+        if (previews.length > 0) {
+          console.log('[Workbench] Auto-switching to preview tab after start action');
+          this.currentView.set('preview');
+          this.showWorkbench.set(true);
+        }
+      }, 3000);
     } else {
       await artifact.runner.runAction(data);
     }

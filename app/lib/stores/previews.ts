@@ -336,27 +336,39 @@ export class PreviewsStore {
   }
 }
 
-// Create a singleton instance
-let previewsStore: PreviewsStore | null = null;
+// Create a singleton instance - initialized lazily
+let previewsStoreInstance: PreviewsStore | null = null;
 
-export function usePreviewStore() {
-  if (!previewsStore) {
+/**
+ * Get the singleton PreviewsStore instance
+ * This ensures all components use the same store
+ */
+export function getPreviewsStore(): PreviewsStore {
+  if (!previewsStoreInstance) {
     /*
      * Initialize with the actual WebContainer promise from the webcontainer module
      * This ensures previews work correctly
      */
-    previewsStore = new PreviewsStore(webcontainer);
+    previewsStoreInstance = new PreviewsStore(webcontainer);
+    console.log('[PreviewsStore] Singleton instance created');
   }
 
-  return previewsStore;
+  return previewsStoreInstance;
+}
+
+/**
+ * Hook for React components to get the previews store
+ */
+export function usePreviewStore() {
+  return getPreviewsStore();
 }
 
 /**
  * Dispose the previews store singleton (useful for cleanup in tests or SPA navigation)
  */
 export function disposePreviewStore() {
-  if (previewsStore) {
-    previewsStore.dispose();
-    previewsStore = null;
+  if (previewsStoreInstance) {
+    previewsStoreInstance.dispose();
+    previewsStoreInstance = null;
   }
 }
