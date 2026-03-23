@@ -68,6 +68,12 @@ export class FilesStore {
    */
   files: MapStore<FileMap> = import.meta.hot?.data.files ?? map({});
 
+  /**
+   * Cleanup references to prevent memory leaks
+   */
+  #lockRefreshInterval: ReturnType<typeof setInterval> | null = null;
+  #urlObserver: MutationObserver | null = null;
+
   get filesCount() {
     return this.#size;
   }
@@ -107,7 +113,7 @@ export class FilesStore {
       let lastChatId = getCurrentChatId();
 
       // Use MutationObserver to detect URL changes (for SPA navigation)
-      const observer = new MutationObserver(() => {
+      this.#urlObserver = new MutationObserver(() => {
         const currentChatId = getCurrentChatId();
 
         if (currentChatId !== lastChatId) {
@@ -117,10 +123,25 @@ export class FilesStore {
         }
       });
 
-      observer.observe(document, { subtree: true, childList: true });
+      this.#urlObserver.observe(document, { subtree: true, childList: true });
     }
 
     this.#init();
+  }
+
+  /**
+   * Clean up resources to prevent memory leaks
+   */
+  dispose() {
+    if (this.#lockRefreshInterval) {
+      clearInterval(this.#lockRefreshInterval);
+      this.#lockRefreshInterval = null;
+    }
+
+    if (this.#urlObserver) {
+      this.#urlObserver.disconnect();
+      this.#urlObserver = null;
+    }
   }
 
   /**
@@ -625,7 +646,7 @@ export class FilesStore {
      * Set up a less frequent periodic check to ensure locks remain applied.
      * This is now less critical since we have the storage event listener.
      */
-    setInterval(() => {
+    this.#lockRefreshInterval = setInterval(() => {
       // Clear the cache to force a fresh read from localStorage
       clearCache();
 

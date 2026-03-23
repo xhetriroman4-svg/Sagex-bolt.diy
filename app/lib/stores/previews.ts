@@ -296,6 +296,26 @@ export class PreviewsStore {
       }
     }
   }
+
+  /**
+   * Clean up resources to prevent memory leaks
+   */
+  dispose() {
+    // Clear all refresh timeouts
+    for (const timeout of this.#refreshTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.#refreshTimeouts.clear();
+
+    // Close broadcast channels
+    if (this.#broadcastChannel) {
+      this.#broadcastChannel.close();
+    }
+
+    if (this.#storageChannel) {
+      this.#storageChannel.close();
+    }
+  }
 }
 
 // Create a singleton instance
@@ -311,4 +331,14 @@ export function usePreviewStore() {
   }
 
   return previewsStore;
+}
+
+/**
+ * Dispose the previews store singleton (useful for cleanup in tests or SPA navigation)
+ */
+export function disposePreviewStore() {
+  if (previewsStore) {
+    previewsStore.dispose();
+    previewsStore = null;
+  }
 }

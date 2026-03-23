@@ -1,6 +1,9 @@
 import { WebContainer } from '@webcontainer/api';
 import { WORK_DIR_NAME } from '~/utils/constants';
 import { cleanStackTrace } from '~/utils/stacktrace';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('WebContainer');
 
 interface WebContainerContext {
   loaded: boolean;
@@ -14,74 +17,90 @@ if (import.meta.hot) {
   import.meta.hot.data.webcontainerContext = webcontainerContext;
 }
 
-export let webcontainer: Promise<WebContainer> = new Promise(() => {
-  // noop for ssr
+export let webcontainer: Promise<WebContainer> = new Promise((_, reject) => {
+  reject(new Error('WebContainer not initialized - SSR environment'));
 });
 
-if (!import.meta.env.SSR) {
-  webcontainer =
-    import.meta.hot?.data.webcontainer ??
-    Promise.resolve()
-      .then(() => {
-        console.log('[WebContainer] Booting WebContainer...');
-        return WebContainer.boot({
-          coep: 'credentialless',
-          workdirName: WORK_DIR_NAME,
-          forwardPreviewErrors: true, // Enable error forwarding from iframes
-        });
-      })
-      .then(async (webcontainer) => {
-        console.log('[WebContainer] WebContainer booted successfully');
-        webcontainerContext.loaded = true;
+if (!import.meta.hot?.data.webcontainer && !import.meta.env.SSR) {
+  webcontainer = Promise.resolve()
+    .then(() => {
+      logger.info('Booting WebContainer...');
+      return WebContainer.boot({
+        coep: 'credentialless',
+        workdirName: WORK_DIR_NAME,
+        forwardPreviewErrors: true, // Enable error forwarding from iframes
+      });
+    })
+    .then(async (webcontainerInstance) => {
+      logger.info('WebContainer booted successfully');
+      webcontainerContext.loaded = true;
 
-        const { workbenchStore } = await import('~/lib/stores/workbench');
+      // Dynamic import with error handling
+      let workbenchStore: typeof import('~/lib/stores/workbench').workbenchStore;
 
-        // Fetch and set preview script with error handling
-        try {
-          const response = await fetch('/inspector-script.js');
+      try {
+        const module = await import('~/lib/stores/workbench');
+        workbenchStore = module.workbenchStore;
+      } catch (error) {
+        logger.error('Failed to import workbench store:', error);
 
-          if (response.ok) {
-            const inspectorScript = await response.text();
-            await webcontainer.setPreviewScript(inspectorScript);
-            console.log('[WebContainer] Preview script installed');
-          } else {
-            console.warn('[WebContainer] Failed to fetch inspector script:', response.status);
-          }
-        } catch (error) {
-          console.error('[WebContainer] Error setting preview script:', error);
+        // Continue without workbench store - preview will still work
+      }
+
+      // Fetch and set preview script with error handling
+      try {
+        const response = await fetch('/inspector-script.js');
+
+        if (response.ok) {
+          const inspectorScript = await response.text();
+          await webcontainerInstance.setPreviewScript(inspectorScript);
+          logger.info('Preview script installed');
+        } else {
+          logger.warn('Failed to fetch inspector script:', response.status);
         }
+      } catch (error) {
+        logger.error('Error setting preview script:', error);
+      }
 
-        // Listen for preview errors
-        webcontainer.on('preview-message', (message) => {
-          console.log('[WebContainer] Preview message:', message);
+      // Listen for preview errors with error boundary
+      webcontainerInstance.on('preview-message', (message) => {
+        try {
+          logger.debug('Preview message:', message);
 
           // Handle both uncaught exceptions and unhandled promise rejections
           if (message.type === 'PREVIEW_UNCAUGHT_EXCEPTION' || message.type === 'PREVIEW_UNHANDLED_REJECTION') {
-            const isPromise = message.type === 'PREVIEW_UNHANDLED_REJECTION';
-            const title = isPromise ? 'Unhandled Promise Rejection' : 'Uncaught Exception';
-            workbenchStore.actionAlert.set({
-              type: 'preview',
-              title,
-              description: 'message' in message ? message.message : 'Unknown error',
-              content: `Error occurred at ${message.pathname}${message.search}${message.hash}\nPort: ${message.port}\n\nStack trace:\n${cleanStackTrace(message.stack || '')}`,
-              source: 'preview',
-            });
+            if (workbenchStore) {
+              const isPromise = message.type === 'PREVIEW_UNHANDLED_REJECTION';
+              const title = isPromise ? 'Unhandled Promise Rejection' : 'Uncaught Exception';
+              workbenchStore.actionAlert.set({
+                type: 'preview',
+                title,
+                description: 'message' in message ? message.message : 'Unknown error',
+                content: `Error occurred at ${message.pathname}${message.search}${message.hash}\nPort: ${message.port}\n\nStack trace:\n${cleanStackTrace(message.stack || '')}`,
+                source: 'preview',
+              });
+            }
           }
-        });
-
-        // Log server-ready events for debugging
-        webcontainer.on('server-ready', (port, url) => {
-          console.log('[WebContainer] Server ready on port:', port, 'URL:', url);
-        });
-
-        return webcontainer;
-      })
-      .catch((error) => {
-        console.error('[WebContainer] Failed to boot:', error);
-        throw error;
+        } catch (handlerError) {
+          logger.error('Error in preview-message handler:', handlerError);
+        }
       });
+
+      // Log server-ready events for debugging
+      webcontainerInstance.on('server-ready', (port, url) => {
+        logger.info('Server ready on port:', port, 'URL:', url);
+      });
+
+      return webcontainerInstance;
+    })
+    .catch((error) => {
+      logger.error('Failed to boot:', error);
+      throw error;
+    });
 
   if (import.meta.hot) {
     import.meta.hot.data.webcontainer = webcontainer;
   }
+} else if (import.meta.hot?.data.webcontainer) {
+  webcontainer = import.meta.hot.data.webcontainer;
 }

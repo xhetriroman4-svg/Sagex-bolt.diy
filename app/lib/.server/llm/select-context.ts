@@ -224,8 +224,11 @@ export async function selectContext(props: {
   const totalFiles = Object.keys(filteredFiles).length;
   logger.info(`Total files: ${totalFiles}`);
 
-  if (totalFiles == 0) {
-    throw new Error(`Bolt failed to select files`);
+  if (totalFiles === 0) {
+    const availableFiles = filePaths.slice(0, 10).join(', ');
+    throw new Error(
+      `Failed to select any files for context. Available files include: ${availableFiles}${filePaths.length > 10 ? '...' : ''}. Total available: ${filePaths.length}. Please check if the files are accessible.`,
+    );
   }
 
   return filteredFiles;

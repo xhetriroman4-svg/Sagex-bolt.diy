@@ -68,10 +68,23 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     }>();
 
   const cookieHeader = request.headers.get('Cookie');
-  const apiKeys = JSON.parse(parseCookies(cookieHeader || '').apiKeys || '{}');
-  const providerSettings: Record<string, IProviderSetting> = JSON.parse(
-    parseCookies(cookieHeader || '').providers || '{}',
-  );
+  const parsedCookies = parseCookies(cookieHeader || '');
+
+  // Safely parse JSON with validation
+  let apiKeys: Record<string, string> = {};
+  let providerSettings: Record<string, IProviderSetting> = {};
+
+  try {
+    apiKeys = JSON.parse(parsedCookies.apiKeys || '{}');
+  } catch {
+    logger.warn('Failed to parse apiKeys from cookies, using empty object');
+  }
+
+  try {
+    providerSettings = JSON.parse(parsedCookies.providers || '{}');
+  } catch {
+    logger.warn('Failed to parse providerSettings from cookies, using empty object');
+  }
 
   const stream = new SwitchableStream();
 
@@ -116,7 +129,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           } satisfies ProgressAnnotation);
 
           // Create a summary of the chat
-          console.log(`Messages count: ${processedMessages.length}`);
+          logger.debug(`Messages count: ${processedMessages.length}`);
 
           summary = await createSummary({
             messages: [...processedMessages],
@@ -159,7 +172,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           } satisfies ProgressAnnotation);
 
           // Select context files
-          console.log(`Messages count: ${processedMessages.length}`);
+          logger.debug(`Messages count: ${processedMessages.length}`);
           filteredFiles = await selectContext({
             messages: [...processedMessages],
             env: context.cloudflare?.env,

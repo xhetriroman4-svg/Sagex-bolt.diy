@@ -119,15 +119,26 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
 
   const reloadPreview = () => {
     if (iframeRef.current) {
-      iframeRef.current.src = iframeRef.current.src;
+      // Use key-based reload to avoid React state conflicts
+      const currentSrc = iframeRef.current.src;
+      iframeRef.current.src = '';
+      requestAnimationFrame(() => {
+        if (iframeRef.current) {
+          iframeRef.current.src = currentSrc;
+        }
+      });
     }
   };
 
   const toggleFullscreen = async () => {
-    if (!isFullscreen && containerRef.current) {
-      await containerRef.current.requestFullscreen();
-    } else if (document.fullscreenElement) {
-      await document.exitFullscreen();
+    try {
+      if (!isFullscreen && containerRef.current) {
+        await containerRef.current.requestFullscreen();
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.warn('Fullscreen toggle failed:', error);
     }
   };
 
@@ -634,9 +645,15 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
       } else if (event.data.type === 'INSPECTOR_CLICK') {
         const element = event.data.elementInfo;
 
-        navigator.clipboard.writeText(element.displayText).then(() => {
-          setSelectedElement?.(element);
-        });
+        navigator.clipboard
+          .writeText(element.displayText)
+          .then(() => {
+            setSelectedElement?.(element);
+          })
+          .catch((error) => {
+            console.warn('Failed to copy to clipboard:', error);
+            setSelectedElement?.(element);
+          });
       }
     };
 
