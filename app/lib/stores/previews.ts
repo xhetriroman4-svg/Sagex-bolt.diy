@@ -173,6 +173,24 @@ export class PreviewsStore {
     // Listen for server ready events
     webcontainer.on('server-ready', (port, url) => {
       console.log('[Preview] Server ready on port:', port, url);
+
+      // Add preview to the store if not already present
+      let previewInfo = this.#availablePreviews.get(port);
+
+      if (!previewInfo) {
+        previewInfo = { port, ready: true, baseUrl: url };
+        this.#availablePreviews.set(port, previewInfo);
+
+        const previews = this.previews.get();
+        previews.push(previewInfo);
+        this.previews.set([...previews]);
+      } else {
+        // Update existing preview
+        previewInfo.ready = true;
+        previewInfo.baseUrl = url;
+        this.previews.set([...this.previews.get()]);
+      }
+
       this.broadcastUpdate(url);
 
       // Initial storage sync when preview is ready
