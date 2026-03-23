@@ -267,9 +267,11 @@ export const ChatImpl = memo(
         if (errorInfo.statusCode === 401 || errorInfo.message.toLowerCase().includes('api key')) {
           errorType = 'authentication';
           title = 'Authentication Error';
-        } else if (errorInfo.statusCode === 429 ||
-                   errorInfo.message.toLowerCase().includes('rate limit') ||
-                   errorInfo.message.toLowerCase().includes('too many requests')) {
+        } else if (
+          errorInfo.statusCode === 429 ||
+          errorInfo.message.toLowerCase().includes('rate limit') ||
+          errorInfo.message.toLowerCase().includes('too many requests')
+        ) {
           errorType = 'rate_limit';
           title = 'Rate Limit Exceeded';
         } else if (errorInfo.message.toLowerCase().includes('quota')) {

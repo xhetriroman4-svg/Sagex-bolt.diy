@@ -383,7 +383,11 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           return 'Custom error: Token limit exceeded. The conversation is too long for the selected model. Try using a model with larger context window or start a new conversation.';
         }
 
-        if (errorMessage.includes('rate limit') || errorMessage.includes('429') || errorMessage.toLowerCase().includes('too many requests')) {
+        if (
+          errorMessage.includes('rate limit') ||
+          errorMessage.includes('429') ||
+          errorMessage.toLowerCase().includes('too many requests')
+        ) {
           return 'Custom error: API rate limit exceeded. Your API key has reached its request limit. Please wait 1-2 minutes and try again, or check your API provider dashboard for quota details. Consider using a different provider or upgrading your plan for higher limits.';
         }
 
@@ -468,13 +472,16 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     }
 
     // Handle rate limiting errors
-    if (error.message?.toLowerCase().includes('too many requests') ||
-        error.message?.toLowerCase().includes('rate limit') ||
-        error.statusCode === 429) {
+    if (
+      error.message?.toLowerCase().includes('too many requests') ||
+      error.message?.toLowerCase().includes('rate limit') ||
+      error.statusCode === 429
+    ) {
       return new Response(
         JSON.stringify({
           ...errorResponse,
-          message: 'API rate limit exceeded. Your API key has reached its request limit. Please wait 1-2 minutes before trying again, or check your API provider dashboard for quota details.',
+          message:
+            'API rate limit exceeded. Your API key has reached its request limit. Please wait 1-2 minutes before trying again, or check your API provider dashboard for quota details.',
           statusCode: 429,
           isRetryable: true,
           retryDelay: 60000, // Suggest 60 second wait

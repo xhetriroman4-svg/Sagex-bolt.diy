@@ -257,12 +257,7 @@ export const TerminalTabs = memo(() => {
               );
             })}
             {terminalCount < MAX_TERMINALS && <IconButton icon="i-ph:plus" size="md" onClick={addTerminal} />}
-            <IconButton
-              icon="i-ph:arrow-clockwise"
-              title="Reset Terminal"
-              size="md"
-              onClick={resetTerminal}
-            />
+            <IconButton icon="i-ph:arrow-clockwise" title="Reset Terminal" size="md" onClick={resetTerminal} />
             <IconButton
               icon="i-ph:clock-counter-clockwise"
               title="Command History"
@@ -277,12 +272,12 @@ export const TerminalTabs = memo(() => {
               onClick={() => setShowDiagnostics(!showDiagnostics)}
               className={showDiagnostics ? 'text-bolt-elements-item-contentAccent' : ''}
             />
-            
+
             {/* Health indicator */}
             <div className="ml-2">
               <TerminalHealthIndicator diagnostics={diagnostics} />
             </div>
-            
+
             <IconButton
               className="ml-auto"
               icon="i-ph:caret-down"
@@ -291,7 +286,7 @@ export const TerminalTabs = memo(() => {
               onClick={() => workbenchStore.toggleTerminal(false)}
             />
           </div>
-          
+
           {/* Command History Panel */}
           {showHistory && (
             <div className="bg-bolt-elements-background-depth-2 border-b border-bolt-elements-borderColor p-2 max-h-40 overflow-y-auto">
@@ -316,7 +311,7 @@ export const TerminalTabs = memo(() => {
                       key={i}
                       className={classNames(
                         'text-xs font-mono p-1.5 rounded cursor-pointer hover:bg-bolt-elements-background-depth-3',
-                        entry.exitCode === 0 ? 'text-green-400' : 'text-red-400'
+                        entry.exitCode === 0 ? 'text-green-400' : 'text-red-400',
                       )}
                       title={`Exit code: ${entry.exitCode}`}
                       onClick={() => {
@@ -333,7 +328,7 @@ export const TerminalTabs = memo(() => {
               )}
             </div>
           )}
-          
+
           {/* Diagnostics Panel */}
           {showDiagnostics && (
             <div className="bg-bolt-elements-background-depth-2 border-b border-bolt-elements-borderColor p-3">
@@ -341,10 +336,15 @@ export const TerminalTabs = memo(() => {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <span className="text-bolt-elements-textTertiary">Status:</span>{' '}
-                  <span className={classNames(
-                    diagnostics.status === 'healthy' ? 'text-green-400' :
-                    diagnostics.status === 'error' ? 'text-red-400' : 'text-yellow-400'
-                  )}>
+                  <span
+                    className={classNames(
+                      diagnostics.status === 'healthy'
+                        ? 'text-green-400'
+                        : diagnostics.status === 'error'
+                          ? 'text-red-400'
+                          : 'text-yellow-400',
+                    )}
+                  >
                     {diagnostics.status}
                   </span>
                 </div>
@@ -383,7 +383,7 @@ export const TerminalTabs = memo(() => {
               )}
             </div>
           )}
-          
+
           {Array.from({ length: terminalCount + 1 }, (_, index) => {
             const isActive = activeTerminal === index;
 

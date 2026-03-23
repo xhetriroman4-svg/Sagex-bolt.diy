@@ -19,18 +19,18 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
 
   const handleAskBolt = () => {
     let promptMessage = `*Fix this ${isPreview ? 'preview' : 'terminal'} error*\n\n`;
-    
+
     // Add error description
     promptMessage += `**Error:** ${description}\n\n`;
-    
+
     // Add command if available
     if (command) {
       promptMessage += `**Command:** \`\`\`sh\n${command}\n\`\`\`\n\n`;
     }
-    
+
     // Add error output
     promptMessage += `**Output:**\n\`\`\`${isPreview ? 'js' : 'sh'}\n${content}\n\`\`\`\n\n`;
-    
+
     // Add suggestions if available
     if (suggestions && suggestions.length > 0) {
       promptMessage += `**Possible solutions I've identified:**\n`;
@@ -39,12 +39,12 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
       });
       promptMessage += '\n';
     }
-    
+
     // Add recovery note if applicable
     if (isRecoverable) {
       promptMessage += `*This error appears to be recoverable. Please help me fix it.*\n`;
     }
-    
+
     postMessage(promptMessage);
   };
 
@@ -77,9 +77,7 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
             >
               {title}
               {isRecoverable && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500">
-                  Recoverable
-                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500">Recoverable</span>
               )}
             </motion.h3>
             <motion.div
@@ -94,7 +92,7 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
                   Error: {description}
                 </div>
               )}
-              
+
               {/* Show suggestions if available */}
               {suggestions && suggestions.length > 0 && (
                 <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">

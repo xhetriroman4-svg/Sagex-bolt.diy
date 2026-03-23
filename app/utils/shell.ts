@@ -130,7 +130,9 @@ export async function newShellProcess(webcontainer: WebContainer, terminal: ITer
   return process;
 }
 
-export type ExecutionResult = { output: string; exitCode: number; retried?: boolean; originalError?: string } | undefined;
+export type ExecutionResult =
+  | { output: string; exitCode: number; retried?: boolean; originalError?: string }
+  | undefined;
 
 export class BoltShell {
   #initialized: (() => void) | undefined;
@@ -219,6 +221,7 @@ export class BoltShell {
           lastError: undefined,
         });
         logger.info('Shell restarted successfully');
+
         return true;
       }
 
@@ -226,6 +229,7 @@ export class BoltShell {
     } catch (error) {
       logger.error('Failed to restart shell:', error);
       this.#lastError = error instanceof Error ? error.message : 'Failed to restart shell';
+
       return false;
     } finally {
       this.#isRestarting = false;
@@ -351,6 +355,7 @@ export class BoltShell {
       // Try to restart shell if it's not available
       if (this.#webcontainer && this.#terminal && retryCount === 0) {
         logger.warn('Shell not ready, attempting restart...');
+
         const restarted = await this.restartShell();
 
         if (restarted) {
@@ -364,6 +369,7 @@ export class BoltShell {
         status: 'error',
         lastError: this.#lastError,
       });
+
       return undefined;
     }
 
@@ -387,6 +393,7 @@ export class BoltShell {
       // Try to restart if this is the first attempt
       if (retryCount < MAX_RETRY_ATTEMPTS) {
         logger.info(`Retrying command (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})...`);
+
         const restarted = await this.restartShell();
 
         if (restarted) {
@@ -455,6 +462,7 @@ export class BoltShell {
       if (resp.exitCode !== 0 && retryCount < MAX_RETRY_ATTEMPTS && this.shouldRetryCommand(command, resp.output)) {
         logger.info(`Auto-retrying failed command (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})...`);
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+
         const retryResult = await this.executeCommand(sessionId, command, abort, retryCount + 1);
 
         if (retryResult) {

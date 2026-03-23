@@ -543,9 +543,9 @@ export class WorkbenchStore {
     const existingPreviews = this.#previewsStore.previews.get();
 
     if (existingPreviews.length > 0) {
-      console.log('[Workbench] Dev server already running, skipping auto-deploy');
+      console.log('[Workbench] Dev server already running, switching to preview');
 
-      // Still switch to preview tab so user can see the changes
+      // Switch to preview tab so user can see the changes
       this.currentView.set('preview');
       this.showWorkbench.set(true);
 
@@ -556,15 +556,13 @@ export class WorkbenchStore {
     const actionsMap = artifact.runner.actions.get();
     const actionList = Object.values(actionsMap);
 
-    // Check if there were any file actions
+    // Check if there were any file actions or shell actions that might have created a project
     const hasFileActions = actionList.some((action) => action.type === 'file');
+    const hasShellActions = actionList.some((action) => action.type === 'shell');
 
-    // Check if there was already a start action
-    const hasStartAction = actionList.some((action) => action.type === 'start');
-
-    // If there were file actions but no start action, auto-deploy
-    if (hasFileActions && !hasStartAction) {
-      console.log('[Workbench] Auto-deploying: No start action detected, starting dev server automatically');
+    // If there were any project-related actions, try to auto-deploy
+    if (hasFileActions || hasShellActions) {
+      console.log('[Workbench] Auto-deploying: Project files detected, starting dev server automatically');
 
       // Check if package.json exists to determine the start command
       const files = this.files.get();
@@ -576,7 +574,21 @@ export class WorkbenchStore {
 
           if (packageJsonEntry?.type === 'file' && packageJsonEntry.content) {
             const packageJson = JSON.parse(packageJsonEntry.content);
-            const startCommand = packageJson.scripts?.dev || packageJson.scripts?.start || 'npm run dev';
+
+            // Determine the best start command
+            let startCommand = 'npm run dev';
+
+            if (packageJson.scripts?.dev) {
+              startCommand = 'npm run dev';
+            } else if (packageJson.scripts?.start) {
+              startCommand = 'npm run start';
+            } else if (packageJson.scripts?.serve) {
+              startCommand = 'npm run serve';
+            } else if (packageJson.scripts?.preview) {
+              startCommand = 'npm run preview';
+            }
+
+            console.log('[Workbench] Auto-starting dev server with command:', startCommand);
 
             // Create a start action automatically
             const autoStartActionId = `auto-start-${Date.now()}`;
@@ -604,19 +616,26 @@ export class WorkbenchStore {
                 console.log('[Workbench] Auto-switching to preview tab after auto-deploy');
                 this.currentView.set('preview');
                 this.showWorkbench.set(true);
-              } else if (attempts < 15) {
-                // Poll every 200ms for up to 3 seconds
+              } else if (attempts < 20) {
+                // Poll every 200ms for up to 4 seconds
                 setTimeout(() => checkPreview(attempts + 1), 200);
+              } else {
+                console.warn('[Workbench] Preview not available after auto-deploy, showing terminal');
+                // If preview not available, show terminal to see what happened
+                this.currentView.set('code');
+                this.showWorkbench.set(true);
               }
             };
 
-            setTimeout(() => checkPreview(), 300);
+            setTimeout(() => checkPreview(), 500);
 
             console.log('[Workbench] Auto-deploy completed with command:', startCommand);
           }
         } catch (error) {
           console.warn('[Workbench] Failed to auto-deploy:', error);
         }
+      } else {
+        console.log('[Workbench] No package.json found, skipping auto-deploy');
       }
     }
   }

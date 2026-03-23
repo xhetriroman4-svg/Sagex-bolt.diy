@@ -58,65 +58,73 @@ export const Terminal = memo(
           terminal.loadAddon(fitAddon);
           terminal.loadAddon(webLinksAddon);
           terminal.open(element);
-          
+
           logger.debug(`Terminal [${id}] initialized successfully`);
         } catch (error) {
           logger.error(`Failed to initialize terminal [${id}]:`, error);
 
           // Update diagnostics
-          import('~/utils/shell').then(({ terminalDiagnostics }) => {
-            const current = terminalDiagnostics.get();
-            terminalDiagnostics.set({
-              ...current,
-              status: 'error',
-              lastError: error instanceof Error ? error.message : 'Terminal initialization failed',
-            });
-          }).catch(() => {});
+          import('~/utils/shell')
+            .then(({ terminalDiagnostics }) => {
+              const current = terminalDiagnostics.get();
+              terminalDiagnostics.set({
+                ...current,
+                status: 'error',
+                lastError: error instanceof Error ? error.message : 'Terminal initialization failed',
+              });
+            })
+            .catch(() => {});
 
           // Attempt recovery with exponential backoff
           let retryCount = 0;
           const maxRetries = 3;
           const retryDelay = 100;
-          
+
           const attemptRecovery = () => {
-            setTimeout(() => {
-              retryCount++;
-              try {
-                terminal.open(element);
-                fitAddon.fit();
-                logger.info(`Terminal [${id}] recovered after ${retryCount} attempts`);
-                
-                // Update diagnostics on recovery
-                import('~/utils/shell').then(({ terminalDiagnostics }) => {
-                  const current = terminalDiagnostics.get();
-                  terminalDiagnostics.set({
-                    ...current,
-                    status: 'healthy',
-                    lastError: undefined,
-                  });
-                }).catch(() => {});
-                
-                onTerminalReady?.(terminal);
-              } catch (retryError) {
-                logger.error(`Terminal recovery attempt ${retryCount} failed [${id}]:`, retryError);
-                
-                if (retryCount < maxRetries) {
-                  attemptRecovery();
-                } else {
-                  logger.error(`Terminal [${id}] failed to recover after ${maxRetries} attempts`);
-                  
-                  // Show error in terminal element
-                  element.innerHTML = `
+            setTimeout(
+              () => {
+                retryCount++;
+
+                try {
+                  terminal.open(element);
+                  fitAddon.fit();
+                  logger.info(`Terminal [${id}] recovered after ${retryCount} attempts`);
+
+                  // Update diagnostics on recovery
+                  import('~/utils/shell')
+                    .then(({ terminalDiagnostics }) => {
+                      const current = terminalDiagnostics.get();
+                      terminalDiagnostics.set({
+                        ...current,
+                        status: 'healthy',
+                        lastError: undefined,
+                      });
+                    })
+                    .catch(() => {});
+
+                  onTerminalReady?.(terminal);
+                } catch (retryError) {
+                  logger.error(`Terminal recovery attempt ${retryCount} failed [${id}]:`, retryError);
+
+                  if (retryCount < maxRetries) {
+                    attemptRecovery();
+                  } else {
+                    logger.error(`Terminal [${id}] failed to recover after ${maxRetries} attempts`);
+
+                    // Show error in terminal element
+                    element.innerHTML = `
                     <div style="color: #ef4444; padding: 10px; font-family: monospace; font-size: 12px;">
                       ⚠️ Terminal failed to initialize<br>
                       <span style="color: #9ca3af;">Click the reset button to try again</span>
                     </div>
                   `;
+                  }
                 }
-              }
-            }, retryDelay * Math.pow(2, retryCount));
+              },
+              retryDelay * Math.pow(2, retryCount),
+            );
           };
-          
+
           attemptRecovery();
         }
 

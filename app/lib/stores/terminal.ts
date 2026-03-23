@@ -31,34 +31,35 @@ export class TerminalStore {
   async attachBoltTerminal(terminal: ITerminal) {
     try {
       const wc = await this.#webcontainer;
-      
+
       // Update diagnostics
       terminalDiagnostics.set({
         ...terminalDiagnostics.get(),
         webcontainerReady: true,
         status: 'initializing',
       });
-      
+
       await this.#boltTerminal.init(wc, terminal);
-      
+
       // Mark as healthy after successful init
       terminalDiagnostics.set({
         ...terminalDiagnostics.get(),
         status: 'healthy',
       });
-      
+
       logger.info('Bolt terminal attached successfully');
     } catch (error: any) {
       terminal.write(coloredText.red('Failed to spawn bolt shell\n\n') + error.message);
-      
+
       // Update diagnostics with error
       terminalDiagnostics.set({
         ...terminalDiagnostics.get(),
         status: 'error',
         lastError: error.message,
       });
-      
+
       logger.error('Failed to attach bolt terminal:', error);
+
       return;
     }
   }
@@ -71,6 +72,7 @@ export class TerminalStore {
     } catch (error: any) {
       terminal.write(coloredText.red('Failed to spawn shell\n\n') + error.message);
       logger.error('Failed to attach terminal:', error);
+
       return;
     }
   }

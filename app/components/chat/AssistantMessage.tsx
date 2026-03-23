@@ -65,9 +65,11 @@ function formatTokenCount(tokens: number): string {
   if (tokens >= 1000000) {
     return `${(tokens / 1000000).toFixed(1)}M`;
   }
+
   if (tokens >= 1000) {
     return `${(tokens / 1000).toFixed(1)}K`;
   }
+
   return tokens.toString();
 }
 
@@ -95,9 +97,18 @@ const TokenUsageDisplay = memo(({ usage, model, provider }: TokenUsageDisplayPro
 
   // Determine color based on usage
   const getUsageColor = (percent: number) => {
-    if (percent < 50) return 'bg-green-500';
-    if (percent < 75) return 'bg-yellow-500';
-    if (percent < 90) return 'bg-orange-500';
+    if (percent < 50) {
+      return 'bg-green-500';
+    }
+
+    if (percent < 75) {
+      return 'bg-yellow-500';
+    }
+
+    if (percent < 90) {
+      return 'bg-orange-500';
+    }
+
     return 'bg-red-500';
   };
 
@@ -110,9 +121,7 @@ const TokenUsageDisplay = memo(({ usage, model, provider }: TokenUsageDisplayPro
           <span className="text-bolt-elements-textTertiary">/</span>
           <span className="text-bolt-elements-textSecondary">{formatTokenCount(maxContext)}</span>
         </div>
-        <span className="text-bolt-elements-textTertiary">
-          ({formatTokenCount(remainingContext)} remaining)
-        </span>
+        <span className="text-bolt-elements-textTertiary">({formatTokenCount(remainingContext)} remaining)</span>
       </div>
       <div className="flex items-center gap-2 text-xs">
         <span className="font-medium">Tokens:</span>
@@ -221,9 +230,7 @@ export const AssistantMessage = memo(
               </Popover>
             )}
             <div className="flex w-full items-center justify-between">
-              {usage && (
-                <TokenUsageDisplay usage={usage} model={model} provider={provider} />
-              )}
+              {usage && <TokenUsageDisplay usage={usage} model={model} provider={provider} />}
               {(onRewind || onFork) && messageId && (
                 <div className="flex gap-2 flex-col lg:flex-row ml-auto">
                   {onRewind && (

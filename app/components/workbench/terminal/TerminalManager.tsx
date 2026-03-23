@@ -57,7 +57,7 @@ export const TerminalManager = memo(({ terminal, isActive }: TerminalManagerProp
       // Ctrl+C to copy selected text
       if ((e.domEvent.ctrlKey || e.domEvent.metaKey) && e.domEvent.key === 'c' && terminal.hasSelection()) {
         const selection = terminal.getSelection();
-        
+
         if (selection && navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard
             .writeText(selection)
@@ -79,6 +79,7 @@ export const TerminalManager = memo(({ terminal, isActive }: TerminalManagerProp
       // Ctrl+K to clear line from cursor to end
       if ((e.domEvent.ctrlKey || e.domEvent.metaKey) && e.domEvent.key === 'k') {
         e.domEvent.preventDefault();
+
         // This is handled by the shell, but we can emit the sequence
         terminal.paste('\x1bK');
       }
@@ -99,7 +100,8 @@ export const TerminalManager = memo(({ terminal, isActive }: TerminalManagerProp
     // Handle terminal resize
     const onDataDisposable = terminal.onData((data) => {
       // Reset error counter on successful input
-      if (data && data !== '\x03') { // Not Ctrl+C
+      if (data && data !== '\x03') {
+        // Not Ctrl+C
         consecutiveErrors.current = 0;
       }
     });
@@ -152,7 +154,7 @@ export const TerminalManager = memo(({ terminal, isActive }: TerminalManagerProp
           if (cols > 0 && rows > 0) {
             // Terminal is responsive
             const currentDiagnostics = terminalDiagnostics.get();
-            
+
             if (currentDiagnostics.status !== 'healthy') {
               terminalDiagnostics.set({
                 ...currentDiagnostics,
@@ -206,6 +208,7 @@ export const TerminalManager = memo(({ terminal, isActive }: TerminalManagerProp
 
       if (hasError) {
         logger.debug('Potential error detected in terminal output');
+
         // Could trigger error analysis here
       }
     });

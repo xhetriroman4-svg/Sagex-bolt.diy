@@ -311,10 +311,10 @@ export class ActionRunner {
     if (!shell || !shell.terminal || !shell.process) {
       // Try to restart the shell
       logger.warn('Shell not ready, attempting restart...');
-      
+
       // Give it a moment and try again
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       if (!shell || !shell.terminal || !shell.process) {
         unreachable('Shell terminal not found after restart attempt');
       }
@@ -329,10 +329,10 @@ export class ActionRunner {
     if (resp?.exitCode != 0) {
       const suggestions = this.#getFixSuggestions(action.content, resp?.output || '');
       const error = new ActionCommandError(
-        'Failed To Start Application', 
+        'Failed To Start Application',
         resp?.output || 'No Output Available',
         suggestions,
-        true // This is often recoverable
+        true, // This is often recoverable
       );
       throw error;
     }
@@ -347,7 +347,7 @@ export class ActionRunner {
     const suggestions: string[] = [];
 
     // Check for common issues
-    if (output.includes('EADDRINUSE') || output.includes('Port') && output.includes('already in use')) {
+    if (output.includes('EADDRINUSE') || (output.includes('Port') && output.includes('already in use'))) {
       suggestions.push('A port is already in use. Try killing the process using that port or use a different port.');
       suggestions.push('Run: `lsof -i :PORT` to find the process, then kill it.');
     }

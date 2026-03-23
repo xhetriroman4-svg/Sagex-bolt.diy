@@ -105,8 +105,10 @@ const getInitialProviderSettings = (): ProviderSetting => {
       try {
         const parsed = JSON.parse(savedSettings);
 
-        // First, add any new providers that weren't in saved settings
-        // This ensures new providers (like Gemini) are added with default settings
+        /*
+         * First, add any new providers that weren't in saved settings
+         * This ensures new providers (like Gemini) are added with default settings
+         */
         PROVIDER_LIST.forEach((provider) => {
           if (!parsed[provider.name]) {
             // New provider - enable by default if not a local provider
@@ -146,6 +148,7 @@ const getInitialProviderSettings = (): ProviderSetting => {
   }
 
   console.log('[Settings] Initial providers:', Object.keys(initialSettings));
+
   return initialSettings;
 };
 
