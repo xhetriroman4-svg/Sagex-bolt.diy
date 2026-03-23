@@ -120,6 +120,20 @@ export class WorkbenchStore {
     this.actionAlert.set(undefined);
   }
 
+  /**
+   * Trigger auto-deploy for the most recent artifact
+   * Called when AI finishes generating a response
+   */
+  async triggerAutoDeploy() {
+    // Get the most recent artifact
+    const lastArtifactId = this.artifactIdList[this.artifactIdList.length - 1];
+    
+    if (lastArtifactId) {
+      console.log('[Workbench] Auto-deploy triggered for artifact:', lastArtifactId);
+      await this.#autoDeployIfNeeded(lastArtifactId);
+    }
+  }
+
   get SupabaseAlert() {
     return this.supabaseAlert;
   }

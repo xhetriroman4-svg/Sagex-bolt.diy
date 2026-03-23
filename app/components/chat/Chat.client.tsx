@@ -210,6 +210,25 @@ export const ChatImpl = memo(
       });
     }, [messages, isLoading, parseMessages]);
 
+    // Auto-deploy when AI finishes streaming
+    const wasLoadingRef = useRef(false);
+    
+    useEffect(() => {
+      // Track when loading transitions from true to false
+      if (wasLoadingRef.current && !isLoading) {
+        console.log('[Chat] AI finished streaming, triggering auto-deploy');
+        
+        // Delay slightly to ensure all actions are processed
+        setTimeout(() => {
+          workbenchStore.triggerAutoDeploy().catch((error) => {
+            console.error('[Chat] Auto-deploy failed:', error);
+          });
+        }, 500);
+      }
+      
+      wasLoadingRef.current = isLoading;
+    }, [isLoading]);
+
     const scrollTextArea = () => {
       const textarea = textareaRef.current;
 
