@@ -70,7 +70,7 @@ const processSampledMessages = createSampler(
       storeMessageHistory(messages).catch((error) => toast.error(error.message));
     }
   },
-  50,
+  16, // Reduced from 50ms to 16ms for smoother message updates (~60fps)
 );
 
 interface ChatProps {

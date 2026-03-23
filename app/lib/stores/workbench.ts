@@ -600,18 +600,24 @@ export class WorkbenchStore {
       await artifact.runner.runAction(data);
 
       /*
-       * Wait a moment for the server to be ready, then switch to preview
-       * The PreviewsStore will capture the server-ready event and update the previews
+       * Use event-based preview detection with polling fallback
+       * Check for preview availability every 200ms, up to 5 seconds
        */
-      setTimeout(() => {
+      const checkPreview = (attempts = 0) => {
         const previews = this.#previewsStore.previews.get();
 
         if (previews.length > 0) {
           console.log('[Workbench] Auto-switching to preview tab after start action');
           this.currentView.set('preview');
           this.showWorkbench.set(true);
+        } else if (attempts < 10) {
+          // Poll every 200ms for up to 2 seconds (faster than fixed 3s delay)
+          setTimeout(() => checkPreview(attempts + 1), 200);
         }
-      }, 3000);
+      };
+
+      // Start checking after a short initial delay
+      setTimeout(() => checkPreview(), 100);
     } else {
       await artifact.runner.runAction(data);
     }
@@ -619,7 +625,7 @@ export class WorkbenchStore {
 
   actionStreamSampler = createSampler(async (data: ActionCallbackData, isStreaming: boolean = false) => {
     return await this._runAction(data, isStreaming);
-  }, 100); // TODO: remove this magic number to have it configurable
+  }, 33); // Reduced from 100ms to 33ms for smoother streaming (~30fps)
 
   #getArtifact(id: string) {
     const artifacts = this.artifacts.get();

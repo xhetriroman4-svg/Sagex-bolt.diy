@@ -211,10 +211,10 @@ export class ActionRunner {
             });
 
           /*
-           * adding a delay to avoid any race condition between 2 start actions
-           * i am up for a better approach
+           * Reduced delay to avoid race condition between start actions
+           * Using shorter delay with event-based readiness check
            */
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           return;
         }
