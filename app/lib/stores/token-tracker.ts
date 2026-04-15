@@ -166,6 +166,8 @@ function checkUsageLimits(): {
   dailyExceeded: boolean;
   monthlyWarning: boolean;
   monthlyExceeded: boolean;
+  contextWindowWarning: boolean;
+  contextWindowPercent: number;
 } {
   const limits = usageLimits.get();
   const today = new Date().toISOString().split('T')[0];
@@ -192,11 +194,19 @@ function checkUsageLimits(): {
 
   const monthlyPercent = (monthlyTotal / limits.monthlyLimit) * 100;
 
+  // Context window estimation: track session token growth
+  const session = currentSessionUsage.get();
+  const contextWindowLimit = 180000; // Typical Claude/GPT context window
+  const contextWindowPercent = Math.round(((session.input + session.output) / contextWindowLimit) * 100);
+  const contextWindowWarning = contextWindowPercent >= 75;
+
   const result = {
     dailyWarning: dailyPercent >= limits.warningThreshold,
     dailyExceeded: dailyTotal >= limits.dailyLimit,
     monthlyWarning: monthlyPercent >= limits.warningThreshold,
     monthlyExceeded: monthlyTotal >= limits.monthlyLimit,
+    contextWindowWarning,
+    contextWindowPercent,
   };
 
   if (result.dailyWarning) {
@@ -205,6 +215,10 @@ function checkUsageLimits(): {
 
   if (result.monthlyWarning) {
     logger.warn(`Monthly usage at ${monthlyPercent.toFixed(1)}% of limit`);
+  }
+
+  if (result.contextWindowWarning) {
+    logger.warn(`Context window at ${contextWindowPercent}% - consider starting a new chat`);
   }
 
   return result;
@@ -222,6 +236,11 @@ export function getUsageStats(): {
     byProvider: Record<string, { input: number; output: number }>;
   };
   limits: UsageLimits;
+  contextWarning: {
+    shouldWarn: boolean;
+    contextWindowPercent: number;
+    suggestedAction: string;
+  };
 } {
   const today = new Date().toISOString().split('T')[0];
   const summaries = dailySummaries.get();
@@ -254,6 +273,20 @@ export function getUsageStats(): {
     }
   }
 
+  // Context window analysis
+  const session = currentSessionUsage.get();
+  const contextWindowLimit = 180000;
+  const contextWindowPercent = Math.round(((session.input + session.output) / contextWindowLimit) * 100);
+
+  let suggestedAction = '';
+  if (contextWindowPercent >= 90) {
+    suggestedAction = 'Context window almost full. Start a new chat to avoid errors.';
+  } else if (contextWindowPercent >= 75) {
+    suggestedAction = 'Context window getting large. Consider starting a new chat soon.';
+  } else if (contextWindowPercent >= 50) {
+    suggestedAction = 'Context window at half capacity. Responses may slow down.';
+  }
+
   return {
     session: currentSessionUsage.get(),
     today: todaySummary,
@@ -263,6 +296,11 @@ export function getUsageStats(): {
       byProvider: monthlyByProvider,
     },
     limits: usageLimits.get(),
+    contextWarning: {
+      shouldWarn: contextWindowPercent >= 75,
+      contextWindowPercent,
+      suggestedAction,
+    },
   };
 }
 

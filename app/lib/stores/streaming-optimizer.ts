@@ -230,7 +230,14 @@ function addStreamingMessage(message: string): void {
 export function getProgressPercentage(): number {
   const session = streamingSession.get();
 
-  if (session.totalFiles === 0) return 0;
+  if (session.totalFiles === 0) {
+    // If no files yet but streaming, show token-based progress
+    if (session.status === 'streaming' && session.estimatedTotalTokens > 0) {
+      return Math.min(95, Math.round((session.consumedTokens / session.estimatedTotalTokens) * 100));
+    }
+
+    return 0;
+  }
 
   const fileProgress_pct = (session.completedFiles / session.totalFiles) * 100;
 
@@ -240,6 +247,60 @@ export function getProgressPercentage(): number {
   }
 
   return Math.round(fileProgress_pct);
+}
+
+/**
+ * Get a human-readable status message for the current streaming state
+ */
+export function getStreamingStatusMessage(): string {
+  const session = streamingSession.get();
+  const speed = streamingSpeed.get();
+  const eta = estimatedTimeRemaining.get();
+  const pct = getProgressPercentage();
+
+  switch (session.status) {
+    case 'idle':
+      return 'Ready';
+    case 'streaming': {
+      let msg = `Generating... ${pct}%`;
+
+      if (speed > 0) {
+        msg += ` (${formatTokenCount(speed)} tokens/s)`;
+      }
+
+      if (eta > 0) {
+        const mins = Math.floor(eta / 60);
+        const secs = eta % 60;
+        msg += ` ~${mins > 0 ? `${mins}m ` : ''}${secs}s`;
+      }
+
+      if (session.totalFiles > 0) {
+        msg += ` [${session.completedFiles}/${session.totalFiles} files]`;
+      }
+
+      if (session.parallelActive > 0) {
+        msg += ` (${session.parallelActive} parallel)`;
+      }
+
+      return msg;
+    }
+    case 'processing':
+      return `Processing... ${session.completedFiles}/${session.totalFiles} files`;
+    case 'complete': {
+      const totalFiles = session.totalFiles;
+      const failed = session.failedFiles;
+
+      if (failed > 0) {
+        return `Done with ${failed} error(s) (${totalFiles} files)`;
+      }
+
+      return `Complete (${totalFiles} files)`;
+    }
+    case 'error':
+      return `Generation failed`;
+    default:
+      return 'Unknown state';
+  }
 }
 
 /**

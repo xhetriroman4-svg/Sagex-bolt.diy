@@ -102,6 +102,15 @@ export class ActionRunner {
   onDeployAlert?: (alert: DeployAlert) => void;
   buildOutput?: { path: string; exitCode: number; output: string };
 
+  // Action queue for priority reordering
+  #pendingActionQueue: Array<{ data: ActionCallbackData; isStreaming: boolean }> = [];
+  #queueProcessing = false;
+
+  // Parallel file write tracking
+  #activeFileWrites = 0;
+  #maxParallelFileWrites = 5;
+  #fileWriteQueue: Array<{ actionId: string; data: ActionCallbackData }> = [];
+
   constructor(
     webcontainerPromise: Promise<WebContainer>,
     getShellTerminal: () => BoltShell,
@@ -114,6 +123,93 @@ export class ActionRunner {
     this.onAlert = onAlert;
     this.onSupabaseAlert = onSupabaseAlert;
     this.onDeployAlert = onDeployAlert;
+  }
+
+  /**
+   * Sort actions by priority: shell actions (npm install) first, then files, then start
+   * Shell actions must run before file writes that import newly installed packages
+   */
+  #prioritizeActions(actions: Array<{ data: ActionCallbackData; isStreaming: boolean }>): Array<{ data: ActionCallbackData; isStreaming: boolean }> {
+    return [...actions].sort((a, b) => {
+      const priorityA = this.#getActionPriority(a.data.action);
+      const priorityB = this.#getActionPriority(b.data.action);
+
+      // Lower priority number = runs first
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Same priority: maintain original order
+      return actions.indexOf(a) - actions.indexOf(b);
+    });
+  }
+
+  /**
+   * Get execution priority for an action type
+   * 0 = shell (npm install must run first)
+   * 1 = supabase migrations
+   * 2 = file writes
+   * 3 = start (always last)
+   */
+  #getActionPriority(action: BoltAction): number {
+    switch (action.type) {
+      case 'shell':
+        // npm install/pnpm add/yarn add commands get highest priority
+        if (action.content.match(/npm\s+(install|i|add)|pnpm\s+add|yarn\s+add/)) {
+          return 0;
+        }
+        // Other shell commands after dependency install but before file writes
+        return 1;
+      case 'supabase':
+        return 2;
+      case 'file':
+        // package.json gets priority 1 (alongside shell) so deps install immediately
+        if (action.filePath?.endsWith('package.json')) {
+          return 0;
+        }
+        return 2;
+      case 'start':
+        return 3;
+      case 'build':
+        return 2;
+      default:
+        return 2;
+    }
+  }
+
+  /**
+   * Execute file writes in parallel for independent files
+   */
+  async #executeFilesInParallel(fileActions: Array<{ actionId: string; data: ActionCallbackData }>): Promise<void> {
+    const results: Promise<void>[] = [];
+
+    for (const { actionId, data } of fileActions) {
+      const action = this.actions.get()[actionId];
+
+      if (!action || action.executed) {
+        continue;
+      }
+
+      // Wait if we've hit the parallel limit
+      while (this.#activeFileWrites >= this.#maxParallelFileWrites) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+
+      this.#activeFileWrites++;
+      this.#updateAction(actionId, { ...data.action, executed: true });
+
+      const writePromise = this.#executeAction(actionId, false)
+        .catch((error) => {
+          logger.error(`Parallel file write failed for ${actionId}:`, error);
+        })
+        .finally(() => {
+          this.#activeFileWrites--;
+        });
+
+      results.push(writePromise);
+    }
+
+    await Promise.all(results);
   }
 
   addAction(data: ActionCallbackData) {
@@ -154,33 +250,124 @@ export class ActionRunner {
     }
 
     if (action.executed) {
-      return; // No return value here
+      return;
     }
 
     if (isStreaming && action.type !== 'file') {
-      return; // No return value here
+      return;
     }
 
     this.#updateAction(actionId, { ...action, ...data.action, executed: !isStreaming });
 
-    this.#currentExecutionPromise = this.#currentExecutionPromise
-      .then(() => {
-        return this.#executeAction(actionId, isStreaming);
-      })
-      .catch((error) => {
-        logger.error('Action execution promise failed:', error);
+    // Queue the action for priority-based execution
+    this.#pendingActionQueue.push({ data, isStreaming });
 
-        // Re-throw so callers know about failures
-        throw error;
-      });
+    // Process queue if not already processing
+    if (!this.#queueProcessing) {
+      this.#processActionQueue();
+    }
 
-    try {
-      await this.#currentExecutionPromise;
-    } catch {
-      // Error already handled inside #executeAction via onAlert
+    if (!isStreaming) {
+      try {
+        await this.#currentExecutionPromise;
+      } catch {
+        // Error already handled inside #executeAction via onAlert
+      }
     }
 
     return;
+  }
+
+  /**
+   * Process the action queue with priority ordering and parallel file writes
+   */
+  async #processActionQueue() {
+    if (this.#queueProcessing) {
+      return;
+    }
+
+    this.#queueProcessing = true;
+
+    while (this.#pendingActionQueue.length > 0) {
+      // Take all pending actions
+      const batch = this.#pendingActionQueue.splice(0, this.#pendingActionQueue.length);
+
+      // Prioritize: shell actions first, then separate file vs non-file
+      const prioritized = this.#prioritizeActions(batch);
+
+      const shellActions = prioritized.filter((a) => {
+        const action = this.actions.get()[a.data.actionId];
+        return action && !action.executed && (a.data.action.type === 'shell' || a.data.action.type === 'supabase' || a.data.action.type === 'build');
+      });
+
+      const fileActions = prioritized.filter((a) => {
+        const action = this.actions.get()[a.data.actionId];
+        return action && !action.executed && a.data.action.type === 'file';
+      });
+
+      const startActions = prioritized.filter((a) => {
+        const action = this.actions.get()[a.data.actionId];
+        return action && !action.executed && a.data.action.type === 'start';
+      });
+
+      // Execute shell actions sequentially (they must run in order)
+      for (const { data, isStreaming } of shellActions) {
+        const actionId = data.actionId;
+        const action = this.actions.get()[actionId];
+
+        if (!action || action.executed) {
+          continue;
+        }
+
+        this.#currentExecutionPromise = this.#currentExecutionPromise
+          .then(() => this.#executeAction(actionId, isStreaming))
+          .catch((error) => {
+            logger.error('Shell action execution failed:', error);
+          });
+
+        try {
+          await this.#currentExecutionPromise;
+        } catch {
+          // Error already handled
+        }
+      }
+
+      // Execute file actions in parallel (they're independent)
+      if (fileActions.length > 0) {
+        const fileActionItems = fileActions.map((a) => ({ actionId: a.data.actionId, data: a.data }));
+        this.#currentExecutionPromise = this.#currentExecutionPromise
+          .then(() => this.#executeFilesInParallel(fileActionItems))
+          .catch((error) => {
+            logger.error('Parallel file execution failed:', error);
+          });
+
+        try {
+          await this.#currentExecutionPromise;
+        } catch {
+          // Error already handled
+        }
+      }
+
+      // Execute start actions last (they're non-blocking by design)
+      for (const { data, isStreaming } of startActions) {
+        const actionId = data.actionId;
+        const action = this.actions.get()[actionId];
+
+        if (!action || action.executed) {
+          continue;
+        }
+
+        this.#currentExecutionPromise = this.#currentExecutionPromise
+          .then(() => this.#executeAction(actionId, isStreaming))
+          .catch((error) => {
+            logger.error('Start action execution failed:', error);
+          });
+
+        // Don't await start actions - they're non-blocking
+      }
+    }
+
+    this.#queueProcessing = false;
   }
 
   async #executeAction(actionId: string, isStreaming: boolean = false) {

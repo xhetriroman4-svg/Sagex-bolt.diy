@@ -26,6 +26,92 @@ export interface StreamingOptions extends Omit<Parameters<typeof _streamText>[0]
 
 const logger = createScopedLogger('stream-text');
 
+// Retry configuration
+const MAX_API_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 1000;
+const RETRY_MAX_DELAY_MS = 10000;
+
+/**
+ * Calculate exponential backoff delay with jitter
+ */
+function getRetryDelay(attempt: number): number {
+  const delay = Math.min(RETRY_BASE_DELAY_MS * Math.pow(2, attempt), RETRY_MAX_DELAY_MS);
+  const jitter = Math.random() * delay * 0.3;
+  return Math.round(delay + jitter);
+}
+
+/**
+ * Check if an error is retryable
+ */
+function isRetryableError(error: any): boolean {
+  if (!error) return false;
+
+  const message = error.message?.toLowerCase() || '';
+  const status = error.statusCode || error.status;
+
+  // Network errors
+  if (message.includes('network') || message.includes('timeout') || message.includes('econnreset') || message.includes('econnrefused')) {
+    return true;
+  }
+
+  // Rate limiting (429)
+  if (status === 429 || message.includes('rate limit') || message.includes('too many requests')) {
+    return true;
+  }
+
+  // Server errors (5xx)
+  if (status >= 500 && status < 600) {
+    return true;
+  }
+
+  // Temporary provider issues
+  if (message.includes('temporarily unavailable') || message.includes('overloaded') || message.includes('capacity')) {
+    return true;
+  }
+
+  // Invalid JSON response (malformed API response)
+  if (message.includes('invalid json') || message.includes('failed to parse')) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Get fallback providers (providers with configured API keys)
+ */
+function getFallbackProviders(
+  currentProviderName: string,
+  apiKeys: Record<string, string>,
+  providerSettings: Record<string, IProviderSetting>,
+): Array<{ provider: typeof PROVIDER_LIST[0]; model: string }> {
+  const fallbacks: Array<{ provider: typeof PROVIDER_LIST[0]; model: string }> = [];
+
+  for (const provider of PROVIDER_LIST) {
+    // Skip current provider
+    if (provider.name === currentProviderName) {
+      continue;
+    }
+
+    // Check if provider has API key configured
+    const hasApiKey = provider.config.apiTokenKey && apiKeys[provider.config.apiTokenKey];
+    const hasProviderSetting = providerSettings[provider.name]?.baseUrl; // Provider has settings if baseUrl is configured
+    const hasEnvKey = !!(provider.config as any).envKey;
+
+    if (hasApiKey || hasProviderSetting || hasEnvKey) {
+      // Get the first available model for this provider
+      const staticModels = LLMManager.getInstance().getStaticModelListFromProvider(provider);
+      const model = staticModels[0]?.name;
+
+      if (model) {
+        fallbacks.push({ provider, model });
+      }
+    }
+  }
+
+  return fallbacks.slice(0, 3); // Limit to 3 fallback providers
+}
+
 function getCompletionTokenLimit(modelDetails: any): number {
   // 1. If model specifies completion tokens, use that
   if (modelDetails.maxCompletionTokens && modelDetails.maxCompletionTokens > 0) {
@@ -307,5 +393,66 @@ export async function streamText(props: {
     ),
   );
 
-  return await _streamText(streamParams);
+  // Try primary provider with retries, then fallback providers
+  let lastError: any = null;
+  const fallbackProviders = getFallbackProviders(currentProvider, apiKeys || {}, providerSettings || {});
+
+  // Attempt 1: Primary provider with retries
+  for (let attempt = 0; attempt < MAX_API_RETRIES; attempt++) {
+    try {
+      const result = await _streamText(streamParams);
+      logger.info(`Successfully connected to ${provider.name}/${modelDetails.name} (attempt ${attempt + 1})`);
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      logger.warn(`API call to ${provider.name}/${modelDetails.name} failed (attempt ${attempt + 1}/${MAX_API_RETRIES}): ${error.message}`);
+
+      if (!isRetryableError(error) || attempt >= MAX_API_RETRIES - 1) {
+        logger.error(`Non-retryable error or max retries reached for ${provider.name}: ${error.message}`);
+        break;
+      }
+
+      // Exponential backoff
+      const delay = getRetryDelay(attempt);
+      logger.info(`Retrying in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  // Attempt 2: Try fallback providers
+  for (let i = 0; i < fallbackProviders.length; i++) {
+    const fallback = fallbackProviders[i];
+    logger.info(`Trying fallback provider ${fallback.provider.name}/${fallback.model} (${i + 1}/${fallbackProviders.length})`);
+
+    try {
+      // Re-create stream params with fallback provider
+      const fallbackStreamParams = {
+        ...streamParams,
+        model: fallback.provider.getModelInstance({
+          model: fallback.model,
+          serverEnv,
+          apiKeys,
+          providerSettings,
+        }),
+      };
+
+      const result = await _streamText(fallbackStreamParams);
+      logger.info(`Successfully connected to fallback ${fallback.provider.name}/${fallback.model}`);
+      return result;
+    } catch (fallbackError: any) {
+      lastError = fallbackError;
+      logger.warn(`Fallback provider ${fallback.provider.name}/${fallback.model} failed: ${fallbackError.message}`);
+    }
+  }
+
+  // All providers failed
+  const errorMessage = lastError?.message || 'All API providers failed';
+ const fallbackInfo = fallbackProviders.length > 0
+    ? ` Tried ${fallbackProviders.length} fallback provider(s).`
+    : ' No fallback providers configured.';
+  logger.error(`${errorMessage}.${fallbackInfo}`);
+
+  throw new Error(
+    `${errorMessage}.${fallbackInfo} Please check your API keys, network connection, and try again.`,
+  );
 }

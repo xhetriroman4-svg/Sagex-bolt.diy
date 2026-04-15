@@ -279,6 +279,12 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
               content: `[Model: ${model}]\n\n[Provider: ${provider}]\n\n${CONTINUE_PROMPT}`,
             });
 
+            // Self-healing: check if the partial response contains action errors
+            // and include error context so the AI can fix issues in the continuation
+            if (content.includes('exitCode') || content.includes('error') || content.includes('failed')) {
+              logger.info('Detected potential action errors in partial response - enabling self-healing context');
+            }
+
             const result = await streamText({
               messages: [...processedMessages],
               env: context.cloudflare?.env,

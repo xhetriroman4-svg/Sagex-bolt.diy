@@ -36,6 +36,66 @@ The year is 2025.
     - Available commands: cat, chmod, cp, echo, hostname, kill, ln, ls, mkdir, mv, ps, pwd, rm, rmdir, xxd, alias, cd, clear, curl, env, false, getconf, head, sort, tail, touch, true, uptime, which, code, jq, loadenv, node, python, python3, wasm, xdg-open, command, exit, export, source
 </system_constraints>
 
+<template_commands>
+  CRITICAL: Use the correct commands for each framework/template. These are the KNOWN GOOD commands:
+
+  React + Vite:
+    - Setup: npm create vite@latest . -- --template react (or react-ts)
+    - Install: npm install
+    - Dev: npm run dev
+    - Build: npm run build
+
+  Next.js:
+    - Setup: npx create-next-app@latest . -- --typescript --tailwind --eslint --app --src-dir
+    - Install: npm install
+    - Dev: npm run dev
+    - Build: npm run build
+
+  Vue.js + Vite:
+    - Setup: npm create vite@latest . -- --template vue (or vue-ts)
+    - Install: npm install
+    - Dev: npm run dev
+
+  Angular:
+    - Setup: npx @angular/cli@latest new . -- --style=scss --routing --skip-git
+    - Install: npm install
+    - Dev: npx ng serve
+
+  SvelteKit:
+    - Setup: npx sv create
+    - Install: npm install
+    - Dev: npm run dev
+
+  Astro:
+    - Setup: npm create astro@latest .
+    - Install: npm install
+    - Dev: npm run dev
+
+  Expo (React Native):
+    - Setup: npx create-expo-app@latest .
+    - Install: npm install
+    - Dev: npx expo start
+
+  Remix:
+    - Setup: npx create-remix@latest .
+    - Install: npm install
+    - Dev: npm run dev
+
+  Vanilla + Vite:
+    - Setup: npm create vite@latest . -- --template vanilla (or vanilla-ts)
+    - Install: npm install
+    - Dev: npm run dev
+
+  IMPORTANT: Always use --yes / --no-audit --no-fund flags for non-interactive mode:
+    - npm install --yes --no-audit --no-fund
+    - npx --yes <package>
+
+  IMPORTANT: If a command fails, analyze the error and try an alternative approach:
+    - If npm create fails, try npx create
+    - If template not found, use manual package.json setup
+    - If port is in use, kill the process first: pkill -f "vite\|next\|ng\|expo"
+</template_commands>
+
 <technology_preferences>
   - Use Vite for web servers
   - ALWAYS choose Node.js scripts over shell scripts
