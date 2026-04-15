@@ -52,9 +52,11 @@ if (import.meta.hot) {
 export function generateShareId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
+
   for (let i = 0; i < 12; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+
   return result;
 }
 
@@ -127,6 +129,7 @@ export function verifyShareAccess(
     if (!password) {
       return { granted: false, reason: 'Password required' };
     }
+
     if (hashPassword(password) !== project.password) {
       return { granted: false, reason: 'Invalid password' };
     }
@@ -148,10 +151,12 @@ export function verifyShareAccess(
  */
 export function revokeShareLink(shareId: string): boolean {
   const projects = sharedProjects.get();
+
   if (projects[shareId]) {
     sharedProjects.setKey(shareId, undefined as any);
     return true;
   }
+
   return false;
 }
 
@@ -166,10 +171,7 @@ export function getProjectShares(projectId: string): SharedProject[] {
 /**
  * Update share permissions
  */
-export function updateSharePermission(
-  shareId: string,
-  permission: SharePermission,
-): boolean {
+export function updateSharePermission(shareId: string, permission: SharePermission): boolean {
   const projects = sharedProjects.get();
   const project = projects[shareId];
 
@@ -177,6 +179,7 @@ export function updateSharePermission(
     sharedProjects.setKey(shareId, { ...project, permission });
     return true;
   }
+
   return false;
 }
 
@@ -191,12 +194,12 @@ export function extendShareExpiration(
   const project = projects[shareId];
 
   if (project) {
-    const newExpiresAt = project.expiresAt
-      ? project.expiresAt + additionalTime
-      : Date.now() + additionalTime;
+    const newExpiresAt = project.expiresAt ? project.expiresAt + additionalTime : Date.now() + additionalTime;
     sharedProjects.setKey(shareId, { ...project, expiresAt: newExpiresAt });
+
     return true;
   }
+
   return false;
 }
 
@@ -205,11 +208,13 @@ export function extendShareExpiration(
  */
 function hashPassword(password: string): string {
   let hash = 0;
+
   for (let i = 0; i < password.length; i++) {
     const char = password.charCodeAt(i);
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
+
   return hash.toString(36);
 }
 
@@ -235,9 +240,7 @@ export async function exportProjectForShare(
 /**
  * Import project from shared data
  */
-export async function importProjectFromShare(
-  shareData: string,
-): Promise<{
+export async function importProjectFromShare(shareData: string): Promise<{
   files: Record<string, any>;
   messages: Message[];
   projectId: string;

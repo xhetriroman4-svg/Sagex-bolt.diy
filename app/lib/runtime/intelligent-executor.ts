@@ -1,6 +1,6 @@
 /**
  * Intelligent Terminal Executor
- * 
+ *
  * This module provides AI-like terminal capabilities similar to how I use my Bash tool:
  * - Command validation and pre-flight checks
  * - Automatic error analysis and fix suggestions
@@ -67,6 +67,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: false,
     }),
   },
+
   // Module not found
   {
     pattern: /Cannot find module ['"]([^'"]+)['"]/,
@@ -79,6 +80,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: true,
     }),
   },
+
   // Command not found
   {
     pattern: /command not found:\s*(\S+)/i,
@@ -91,6 +93,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: true,
     }),
   },
+
   // Permission denied
   {
     pattern: /Permission denied/i,
@@ -103,6 +106,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: command.includes('npm'),
     }),
   },
+
   // Port already in use
   {
     pattern: /EADDRINUSE|Port (\d+) is already in use/i,
@@ -114,6 +118,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: false,
     }),
   },
+
   // Network errors
   {
     pattern: /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|network\s*(error|timeout)/i,
@@ -125,6 +130,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: false,
     }),
   },
+
   // Missing script
   {
     pattern: /Missing script:\s*"([^"]+)"/i,
@@ -136,6 +142,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: false,
     }),
   },
+
   // Syntax error in file
   {
     pattern: /SyntaxError:\s*(.+?)\s*at\s*(.+?):(\d+)/i,
@@ -147,6 +154,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: false,
     }),
   },
+
   // Out of memory
   {
     pattern: /JavaScript heap out of memory|FATAL ERROR.*heap/i,
@@ -159,6 +167,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: true,
     }),
   },
+
   // TypeScript errors
   {
     pattern: /error TS(\d+):\s*(.+)/i,
@@ -170,6 +179,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: false,
     }),
   },
+
   // File not found
   {
     pattern: /ENOENT:\s*no such file or directory,\s*(?:open|stat|access)\s*['"]?([^'"\s]+)['"]?/i,
@@ -181,6 +191,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: false,
     }),
   },
+
   // Lock file issues
   {
     pattern: /npm ERR!\s*(?:It is likely not a bug in npm|lockfile)/i,
@@ -193,6 +204,7 @@ const ERROR_PATTERNS: Array<{
       canAutoFix: true,
     }),
   },
+
   // Peer dependency issues
   {
     pattern: /ERESOLVE.*Could not resolve dependency/i,
@@ -219,18 +231,21 @@ const COMMAND_PATTERNS: Array<{
     checks: ['package.json exists', 'script exists in package.json'],
     prepare: (match) => [`cat package.json | grep -q '"${match[1]}"' || echo "Script ${match[1]} not found"`],
   },
+
   // npm install
   {
     pattern: /^npm\s+(?:i|install|add)(?:\s+(.+))?/,
     checks: ['package.json exists'],
     prepare: () => ['test -f package.json || echo "{}" > package.json'],
   },
+
   // npx commands
   {
     pattern: /^npx\s+(\S+)/,
     checks: ['npm is available'],
     prepare: () => [],
   },
+
   // Node.js execution
   {
     pattern: /^node\s+(\S+)/,
@@ -269,6 +284,7 @@ export function analyzeCommand(command: string, context?: ExecutionContext): Com
 
   // Check for package installation
   const npmInstallMatch = command.match(/npm\s+(?:i|install|add)\s+(?:-g\s+)?(.+)/i);
+
   if (npmInstallMatch) {
     const packages = npmInstallMatch[1].split(/\s+/).filter((p) => !p.startsWith('-'));
     requiresDependencies.push(...packages);
@@ -288,6 +304,7 @@ export function analyzeCommand(command: string, context?: ExecutionContext): Com
 
   // Check for cd to non-existent directory (we can't verify this without executing)
   const cdMatch = command.match(/cd\s+(\S+)/);
+
   if (cdMatch && !cdMatch[1].startsWith('$')) {
     suggestions.push(`Ensure directory '${cdMatch[1]}' exists before cd`);
   }
@@ -323,6 +340,7 @@ export function analyzeError(command: string, output: string, exitCode: number):
   // Try to match known error patterns
   for (const { pattern, type, getFix } of ERROR_PATTERNS) {
     const match = output.match(pattern);
+
     if (match) {
       return getFix(match, command, output);
     }
@@ -354,6 +372,7 @@ export function generateFixCommand(command: string, error: ErrorAnalysis): strin
     if (error.type === 'network') {
       return `${command} --prefer-offline`;
     }
+
     if (error.type === 'permission') {
       return `${command} --unsafe-perm`;
     }

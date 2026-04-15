@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  currentSessionUsage,
-  usageLimits,
-  formatTokenCount,
-  getUsagePercentage,
-} from '~/lib/stores/token-tracker';
+import { currentSessionUsage, usageLimits, formatTokenCount, getUsagePercentage } from '~/lib/stores/token-tracker';
 import { sharedProjects, revokeShareLink } from '~/lib/stores/project-sharing';
 import { classNames } from '~/utils/classNames';
 
@@ -114,8 +109,8 @@ export function UsagePanel({ className }: UsagePanelProps) {
                 <div className="text-sm text-blue-400">
                   <p className="font-medium mb-1">About Token Usage</p>
                   <p className="text-xs text-blue-300">
-                    Tokens are consumed when generating code and chat responses. 
-                    This is a local estimate and may differ from your provider's actual billing.
+                    Tokens are consumed when generating code and chat responses. This is a local estimate and may differ
+                    from your provider's actual billing.
                   </p>
                 </div>
               </div>

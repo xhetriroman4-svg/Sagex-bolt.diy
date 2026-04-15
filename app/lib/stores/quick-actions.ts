@@ -78,6 +78,7 @@ export function getVisibleQuickActions(): QuickAction[] {
     if (action.condition) {
       return action.condition();
     }
+
     return true;
   });
 }
@@ -135,6 +136,7 @@ export function toggleFavoriteAction(actionId: string): void {
 export function getFavoriteActions(): QuickAction[] {
   const favorites = favoriteActions.get();
   const actions = quickActionsRegistry.get();
+
   return favorites.map((id) => actions[id]).filter(Boolean);
 }
 
@@ -144,6 +146,7 @@ export function getFavoriteActions(): QuickAction[] {
 export function getRecentActions(): QuickAction[] {
   const recent = recentActions.get();
   const actions = quickActionsRegistry.get();
+
   return recent.map((id) => actions[id]).filter(Boolean);
 }
 

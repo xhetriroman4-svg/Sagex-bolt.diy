@@ -177,7 +177,9 @@ export default class GeminiProvider extends BaseProvider {
     });
 
     if (!apiKey) {
-      throw new Error(`Missing API key for ${this.name} provider. Get your API key from https://aistudio.google.com/app/apikey`);
+      throw new Error(
+        `Missing API key for ${this.name} provider. Get your API key from https://aistudio.google.com/app/apikey`,
+      );
     }
 
     // Use OpenAI-compatible endpoint for Gemini

@@ -12,6 +12,9 @@ import {
   List,
   Code,
   Keyboard,
+  GitBranch,
+  Globe,
+  Brain,
 } from 'lucide-react';
 
 // GitLab icon component
@@ -68,6 +71,9 @@ export const TAB_ICONS: Record<TabType, React.ComponentType<{ className?: string
   mcp: Wrench,
   templates: Code,
   shortcuts: Keyboard,
+  'version-history': GitBranch,
+  'api-tester': Globe,
+  'context-memory': Brain,
 };
 
 export const TAB_LABELS: Record<TabType, string> = {
@@ -87,6 +93,9 @@ export const TAB_LABELS: Record<TabType, string> = {
   mcp: 'MCP Servers',
   templates: 'Code Templates',
   shortcuts: 'Keyboard Shortcuts',
+  'version-history': 'Version History',
+  'api-tester': 'API Tester',
+  'context-memory': 'Context Memory',
 };
 
 export const TAB_DESCRIPTIONS: Record<TabType, string> = {
@@ -106,6 +115,9 @@ export const TAB_DESCRIPTIONS: Record<TabType, string> = {
   mcp: 'Configure MCP (Model Context Protocol) servers',
   templates: 'Browse and use code templates and snippets',
   shortcuts: 'View and customize keyboard shortcuts',
+  'version-history': 'Time travel, branches, and snapshot management',
+  'api-tester': 'Built-in HTTP client for testing endpoints',
+  'context-memory': 'AI memory, RAG, and context management',
 };
 
 export const DEFAULT_TAB_CONFIG = [
@@ -124,6 +136,9 @@ export const DEFAULT_TAB_CONFIG = [
   { id: 'notifications', visible: true, window: 'user' as const, order: 11 },
   { id: 'event-logs', visible: true, window: 'user' as const, order: 12 },
   { id: 'mcp', visible: true, window: 'user' as const, order: 13 },
+  { id: 'version-history', visible: true, window: 'user' as const, order: 14 },
+  { id: 'api-tester', visible: true, window: 'user' as const, order: 15 },
+  { id: 'context-memory', visible: true, window: 'user' as const, order: 16 },
 
   // User Window Tabs (In dropdown, initially hidden)
 ];

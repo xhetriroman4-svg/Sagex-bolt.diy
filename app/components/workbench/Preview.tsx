@@ -604,8 +604,8 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
   const getFrameColor = useCallback(() => {
     // Check if the document has a dark class or data-theme="dark"
     const isDarkMode =
-      document.documentElement.classList.contains('dark') ||
-      document.documentElement.getAttribute('data-theme') === 'dark' ||
+      (document.documentElement?.classList?.contains('dark') ?? false) ||
+      document.documentElement?.getAttribute('data-theme') === 'dark' ||
       window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     // Return a darker color for light mode, lighter color for dark mode

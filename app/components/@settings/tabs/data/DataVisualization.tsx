@@ -30,13 +30,17 @@ export function DataVisualization({ chats }: DataVisualizationProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
+    const isDark = document.documentElement?.classList?.contains('dark') ?? false;
     setIsDarkMode(isDark);
+
+    if (!document.documentElement) {
+      return () => {};
+    }
 
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
-          setIsDarkMode(document.documentElement.classList.contains('dark'));
+          setIsDarkMode(document.documentElement?.classList?.contains('dark') ?? false);
         }
       });
     });

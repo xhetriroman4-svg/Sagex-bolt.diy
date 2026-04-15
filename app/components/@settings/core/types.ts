@@ -19,7 +19,10 @@ export type TabType =
   | 'event-logs'
   | 'mcp'
   | 'templates'
-  | 'shortcuts';
+  | 'shortcuts'
+  | 'version-history'
+  | 'api-tester'
+  | 'context-memory';
 
 export type WindowType = 'user' | 'developer';
 
@@ -85,6 +88,9 @@ export const TAB_LABELS: Record<TabType, string> = {
   mcp: 'MCP Servers',
   templates: 'Code Templates',
   shortcuts: 'Shortcuts',
+  'version-history': 'Version History',
+  'api-tester': 'API Tester',
+  'context-memory': 'Context Memory',
 };
 
 export const categoryLabels: Record<SettingCategory, string> = {

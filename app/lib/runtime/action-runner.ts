@@ -169,9 +169,16 @@ export class ActionRunner {
       })
       .catch((error) => {
         logger.error('Action execution promise failed:', error);
+
+        // Re-throw so callers know about failures
+        throw error;
       });
 
-    await this.#currentExecutionPromise;
+    try {
+      await this.#currentExecutionPromise;
+    } catch {
+      // Error already handled inside #executeAction via onAlert
+    }
 
     return;
   }
@@ -226,22 +233,36 @@ export class ActionRunner {
               this.#updateAction(actionId, { status: 'failed', error: 'Action failed' });
               logger.error(`[${action.type}]:Action failed\n\n`, err);
 
-              if (!(err instanceof ActionCommandError)) {
-                return;
+              // Alert for ALL errors, not just ActionCommandError
+              if (err instanceof ActionCommandError) {
+                this.onAlert?.({
+                  type: 'error',
+                  title: 'Dev Server Failed',
+                  description: err.header,
+                  content: err.output,
+                  source: 'terminal',
+                  suggestions: err.suggestions,
+                  isRecoverable: err.isRecoverable,
+                  command: action.content,
+                  autoFixCommand: err.autoFixCommand,
+                  canAutoFix: err.isRecoverable,
+                });
+              } else {
+                // Alert for non-ActionCommandError too (e.g., shell not found, TypeError, etc.)
+                this.onAlert?.({
+                  type: 'error',
+                  title: 'Dev Server Failed',
+                  description: err.message || 'An unexpected error occurred while starting the dev server',
+                  content: err.stack || String(err),
+                  source: 'terminal',
+                  isRecoverable: true,
+                  command: action.content,
+                  suggestions: [
+                    'Try resetting the terminal and running the command again',
+                    'Check if the project dependencies are installed',
+                  ],
+                });
               }
-
-              this.onAlert?.({
-                type: 'error',
-                title: 'Dev Server Failed',
-                description: err.header,
-                content: err.output,
-                source: 'terminal',
-                suggestions: err.suggestions,
-                isRecoverable: err.isRecoverable,
-                command: action.content,
-                autoFixCommand: err.autoFixCommand,
-                canAutoFix: err.isRecoverable,
-              });
             });
 
           /*
@@ -266,7 +287,18 @@ export class ActionRunner {
       logger.error(`[${action.type}]:Action failed\n\n`, error);
 
       if (!(error instanceof ActionCommandError)) {
-        return;
+        // For non-ActionCommandError, still alert with useful info
+        this.onAlert?.({
+          type: 'error',
+          title: 'Action Failed',
+          description: error instanceof Error ? error.message : 'An unexpected error occurred',
+          content: error instanceof Error ? error.stack || error.message : String(error),
+          source: 'terminal',
+          isRecoverable: true,
+          command: action.type === 'shell' ? action.content : undefined,
+          suggestions: ['Try resetting the terminal', 'Check the terminal output for error details'],
+        });
+        throw error;
       }
 
       this.onAlert?.({
@@ -292,10 +324,47 @@ export class ActionRunner {
     }
 
     const shell = this.#shellTerminal();
+
+    if (!shell) {
+      throw new ActionCommandError(
+        'Shell Not Available',
+        'The terminal shell is not available. The WebContainer may still be initializing.',
+        ['Wait a few seconds for the WebContainer to finish booting', 'Try resetting the terminal'],
+        true,
+      );
+    }
+
     await shell.ready();
 
-    if (!shell || !shell.terminal || !shell.process) {
-      unreachable('Shell terminal not found');
+    if (!shell.terminal || !shell.process) {
+      // Actually try to restart the shell
+      logger.warn('Shell not ready for shell action, attempting restart...');
+
+      try {
+        const restarted = await shell.restartShell();
+
+        if (!restarted) {
+          throw new ActionCommandError(
+            'Shell Restart Failed',
+            'Could not restart the terminal shell for command execution.',
+            ['Try refreshing the page', 'Reset the terminal using the terminal settings'],
+            true,
+          );
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } catch (restartError) {
+        if (restartError instanceof ActionCommandError) {
+          throw restartError;
+        }
+
+        throw new ActionCommandError(
+          'Shell Error',
+          `Failed to restart shell: ${restartError instanceof Error ? restartError.message : 'Unknown error'}`,
+          ['Try refreshing the page', 'Reset the terminal'],
+          true,
+        );
+      }
     }
 
     // Pre-validate command for common issues
@@ -333,21 +402,53 @@ export class ActionRunner {
     }
 
     if (!this.#shellTerminal) {
-      unreachable('Shell terminal not found');
+      throw new ActionCommandError(
+        'Shell Not Available',
+        'The terminal shell is not available. The WebContainer may still be initializing.',
+        [
+          'Wait a few seconds for the WebContainer to finish booting',
+          'Try resetting the terminal using the terminal settings',
+        ],
+        true,
+      );
     }
 
     const shell = this.#shellTerminal();
     await shell.ready();
 
     if (!shell || !shell.terminal || !shell.process) {
-      // Try to restart the shell
+      // Actually try to restart the shell instead of just waiting
       logger.warn('Shell not ready, attempting restart...');
 
-      // Give it a moment and try again
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        const restarted = await shell.restartShell();
 
-      if (!shell || !shell.terminal || !shell.process) {
-        unreachable('Shell terminal not found after restart attempt');
+        if (restarted) {
+          logger.info('Shell restarted successfully');
+
+          // Wait for shell to be fully ready after restart
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } else {
+          logger.error('Shell restart failed');
+          throw new ActionCommandError(
+            'Shell Restart Failed',
+            'Could not restart the terminal shell. The WebContainer may be in an error state.',
+            [
+              'Try refreshing the page',
+              'Reset the terminal using the terminal settings',
+              'Check browser console for errors',
+            ],
+            true,
+          );
+        }
+      } catch (restartError) {
+        logger.error('Error during shell restart:', restartError);
+        throw new ActionCommandError(
+          'Shell Error',
+          `Failed to restart the shell: ${restartError instanceof Error ? restartError.message : 'Unknown error'}`,
+          ['Try refreshing the page to reinitialize the WebContainer', 'Reset the terminal'],
+          true,
+        );
       }
     }
 
@@ -357,11 +458,20 @@ export class ActionRunner {
     });
     logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
 
-    if (resp?.exitCode != 0) {
-      const suggestions = this.#getFixSuggestions(action.content, resp?.output || '');
+    if (!resp) {
+      throw new ActionCommandError(
+        'No Shell Response',
+        'The terminal did not respond to the start command. The shell may have crashed.',
+        ['Try resetting the terminal', 'Refresh the page and try again'],
+        true,
+      );
+    }
+
+    if (resp.exitCode != 0) {
+      const suggestions = this.#getFixSuggestions(action.content, resp.output || '');
       const error = new ActionCommandError(
         'Failed To Start Application',
-        resp?.output || 'No Output Available',
+        resp.output || 'No Output Available',
         suggestions,
         true, // This is often recoverable
       );

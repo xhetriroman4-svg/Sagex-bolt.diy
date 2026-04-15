@@ -38,8 +38,10 @@ export interface UsageLimits {
 }
 
 // Token usage store
-export const tokenUsageHistory: MapStore<Record<string, TokenUsageRecord>> = import.meta.hot?.data.tokenUsageHistory ?? map({});
-export const dailySummaries: MapStore<Record<string, DailyUsageSummary>> = import.meta.hot?.data.dailySummaries ?? map({});
+export const tokenUsageHistory: MapStore<Record<string, TokenUsageRecord>> =
+  import.meta.hot?.data.tokenUsageHistory ?? map({});
+export const dailySummaries: MapStore<Record<string, DailyUsageSummary>> =
+  import.meta.hot?.data.dailySummaries ?? map({});
 export const currentSessionUsage = atom<{ input: number; output: number }>(
   import.meta.hot?.data.currentSessionUsage ?? { input: 0, output: 0 },
 );
@@ -179,8 +181,10 @@ function checkUsageLimits(): {
   monthStart.setHours(0, 0, 0, 0);
 
   let monthlyTotal = 0;
+
   for (const [date, summary] of Object.entries(summaries)) {
     const summaryDate = new Date(date);
+
     if (summaryDate >= monthStart) {
       monthlyTotal += summary.totalTokens;
     }
@@ -198,6 +202,7 @@ function checkUsageLimits(): {
   if (result.dailyWarning) {
     logger.warn(`Daily usage at ${dailyPercent.toFixed(1)}% of limit`);
   }
+
   if (result.monthlyWarning) {
     logger.warn(`Monthly usage at ${monthlyPercent.toFixed(1)}% of limit`);
   }
@@ -233,6 +238,7 @@ export function getUsageStats(): {
 
   for (const [date, summary] of Object.entries(summaries)) {
     const summaryDate = new Date(date);
+
     if (summaryDate >= monthStart) {
       monthlyTokens += summary.totalTokens;
       monthlyRequests += summary.requestCount;
@@ -241,6 +247,7 @@ export function getUsageStats(): {
         if (!monthlyByProvider[provider]) {
           monthlyByProvider[provider] = { input: 0, output: 0 };
         }
+
         monthlyByProvider[provider].input += tokens.input;
         monthlyByProvider[provider].output += tokens.output;
       }
@@ -289,6 +296,7 @@ export function clearOldHistory(olderThanDays: number = 30): number {
   }
 
   logger.info(`Cleared ${cleared} old token usage records`);
+
   return cleared;
 }
 
@@ -299,9 +307,11 @@ export function formatTokenCount(tokens: number): string {
   if (tokens >= 1_000_000) {
     return `${(tokens / 1_000_000).toFixed(1)}M`;
   }
+
   if (tokens >= 1_000) {
     return `${(tokens / 1_000).toFixed(1)}K`;
   }
+
   return tokens.toString();
 }
 

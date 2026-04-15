@@ -31,6 +31,10 @@ import LocalProvidersTab from '~/components/@settings/tabs/providers/local/Local
 import McpTab from '~/components/@settings/tabs/mcp/McpTab';
 import CodeTemplatesTab from '~/components/@settings/tabs/templates/CodeTemplatesTab';
 import ShortcutsTab from '~/components/@settings/tabs/shortcuts/ShortcutsTab';
+import VersionHistory from '~/components/workbench/VersionHistory';
+import SnapshotManager from '~/components/workbench/SnapshotManager';
+import ApiTester from '~/components/workbench/ApiTester';
+import ChatMemory from '~/components/chat/ChatMemory';
 
 interface ControlPanelProps {
   open: boolean;
@@ -157,6 +161,12 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
         return <CodeTemplatesTab />;
       case 'shortcuts':
         return <ShortcutsTab />;
+      case 'version-history':
+        return <VersionHistory />;
+      case 'api-tester':
+        return <ApiTester />;
+      case 'context-memory':
+        return <ChatMemory />;
 
       default:
         return null;

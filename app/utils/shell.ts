@@ -370,7 +370,11 @@ export class BoltShell {
         lastError: this.#lastError,
       });
 
-      return undefined;
+      return {
+        output: 'Shell not initialized. The WebContainer terminal may still be booting. Please try again.',
+        exitCode: -1,
+        originalError: 'Shell process or terminal not available',
+      };
     }
 
     const state = this.executionState.get();
@@ -507,7 +511,8 @@ export class BoltShell {
     let buffer = ''; // <-- Add a buffer to accumulate output
 
     if (!this.#outputStream) {
-      return { output: fullOutput, exitCode };
+      logger.warn('Output stream not available - shell may not be initialized');
+      return { output: 'Shell output stream not available. The terminal may not be ready.', exitCode: -1 };
     }
 
     const tappedStream = this.#outputStream;
@@ -541,14 +546,19 @@ export class BoltShell {
       }
 
       // Check if command completion signal with exit code
-      const [, osc, , , code] = text.match(/\x1b\]654;([^\x07=]+)=?((-?\d+):(\d+))?\x07/) || [];
+      const oscMatch = text.match(/\x1b\]654;([^\x07=]+)=?((-?\d+):(\d+))?\x07/);
 
-      if (osc === 'exit') {
-        exitCode = parseInt(code, 10);
-      }
+      if (oscMatch) {
+        const osc = oscMatch[1];
+        const parsedExitCode = oscMatch[3] !== undefined ? parseInt(oscMatch[3], 10) : 0;
 
-      if (osc === waitCode) {
-        break;
+        if (osc === 'exit') {
+          exitCode = parsedExitCode;
+        }
+
+        if (osc === waitCode) {
+          break;
+        }
       }
     }
 

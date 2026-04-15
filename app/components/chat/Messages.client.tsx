@@ -10,6 +10,8 @@ import { toast } from 'react-toastify';
 import { forwardRef } from 'react';
 import type { ForwardedRef } from 'react';
 import type { ProviderInfo } from '~/types/model';
+import StreamingProgress from './StreamingProgress';
+import ErrorRecovery from './ErrorRecovery';
 
 interface MessagesProps {
   id?: string;
@@ -93,9 +95,8 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
               );
             })
           : null}
-        {isStreaming && (
-          <div className="text-center w-full  text-bolt-elements-item-contentAccent i-svg-spinners:3-dots-fade text-4xl mt-4"></div>
-        )}
+        {isStreaming && <StreamingProgress />}
+        <ErrorRecovery />
       </div>
     );
   },
