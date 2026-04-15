@@ -20,7 +20,7 @@ import { useSearchParams } from '@remix-run/react';
 import { createSampler } from '~/utils/sampler';
 import { getTemplates, selectStarterTemplate } from '~/utils/selectStarterTemplate';
 import { logStore } from '~/lib/stores/logs';
-import { streamingState } from '~/lib/stores/streaming';
+import { streamingState, tokenUsage, streamingStartTime } from '~/lib/stores/streaming';
 import { filesToArtifacts } from '~/utils/fileUtils';
 import { supabaseConnection } from '~/lib/stores/supabase';
 import { defaultDesignScheme, type DesignScheme } from '~/types/design-scheme';
@@ -95,6 +95,7 @@ export const ChatImpl = memo(
     const [designScheme, setDesignScheme] = useState<DesignScheme>(defaultDesignScheme);
     const actionAlert = useStore(workbenchStore.alert);
     const deployAlert = useStore(workbenchStore.deployAlert);
+    const shellErrorForHealing = useStore(workbenchStore.shellErrorForHealing);
     const supabaseConn = useStore(supabaseConnection);
     const selectedProject = supabaseConn.stats?.projects?.find(
       (project) => project.id === supabaseConn.selectedProjectId,
@@ -169,7 +170,17 @@ export const ChatImpl = memo(
             usage,
             messageLength: message.content.length,
           });
+
+          // Update token usage store for display
+          tokenUsage.set({
+            promptTokens: usage.promptTokens || 0,
+            completionTokens: usage.completionTokens || 0,
+            totalTokens: usage.totalTokens || 0,
+          });
         }
+
+        // Clear streaming start time
+        streamingStartTime.set(0);
 
         logger.debug('Finished streaming');
       },
@@ -196,6 +207,34 @@ export const ChatImpl = memo(
 
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
+    // Track cumulative token usage from message annotations
+    useEffect(() => {
+      if (!messages || messages.length === 0) {
+        return;
+      }
+
+      let cumulativeUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+
+      for (const message of messages) {
+        if (message.annotations && Array.isArray(message.annotations)) {
+          for (const annotation of message.annotations) {
+            if (typeof annotation === 'object' && annotation !== null) {
+              const ann = annotation as { type?: string; value?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } };
+              if (ann.type === 'usage' && ann.value) {
+                cumulativeUsage.promptTokens += ann.value.promptTokens || 0;
+                cumulativeUsage.completionTokens += ann.value.completionTokens || 0;
+                cumulativeUsage.totalTokens += ann.value.totalTokens || 0;
+              }
+            }
+          }
+        }
+      }
+
+      if (cumulativeUsage.totalTokens > 0) {
+        tokenUsage.set(cumulativeUsage);
+      }
+    }, [messages]);
+
     useEffect(() => {
       chatStore.setKey('started', initialMessages.length > 0);
     }, []);
@@ -212,6 +251,67 @@ export const ChatImpl = memo(
 
     // Auto-deploy when AI finishes streaming
     const wasLoadingRef = useRef(false);
+
+    // Self-healing: auto-send shell errors to AI for self-correction
+    const selfHealTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const lastHealedErrorRef = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+      if (!shellErrorForHealing || isLoading) {
+        return;
+      }
+
+      // Prevent duplicate healing for the same error
+      const errorKey = `${shellErrorForHealing.command}:${shellErrorForHealing.description}`;
+      if (errorKey === lastHealedErrorRef.current) {
+        return;
+      }
+
+      lastHealedErrorRef.current = errorKey;
+
+      // Clear any existing timeout
+      if (selfHealTimeoutRef.current) {
+        clearTimeout(selfHealTimeoutRef.current);
+      }
+
+      // Wait 2 seconds before sending to AI (gives user time to see the error)
+      selfHealTimeoutRef.current = setTimeout(() => {
+        if (!shellErrorForHealing) {
+          return;
+        }
+
+        const errorContext = `The following command failed with exit code indicating an error. Please analyze the error and fix it automatically:
+
+**Command:** \`${shellErrorForHealing.command}\`
+
+**Error:** ${shellErrorForHealing.description}
+
+**Output:**
+\`\`\`
+${(shellErrorForHealing.content || 'No output available').slice(0, 2000)}
+\`\`\`
+
+${shellErrorForHealing.suggestions?.length ? `**Suggested fixes:**\n${shellErrorForHealing.suggestions.map((s) => `- ${s}`).join('\n')}` : ''}
+
+Please fix this error and re-run the command.`;
+
+        logger.info('[Self-Healing] Auto-sending error context to AI');
+
+        append({
+          role: 'user',
+          content: `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${errorContext}`,
+        });
+
+        workbenchStore.clearShellErrorForHealing();
+        workbenchStore.clearAlert();
+      }, 2000);
+
+      return () => {
+        if (selfHealTimeoutRef.current) {
+          clearTimeout(selfHealTimeoutRef.current);
+        }
+      };
+    }, [shellErrorForHealing, isLoading]);
 
     useEffect(() => {
       // Track when loading transitions from true to false
@@ -511,6 +611,7 @@ export const ChatImpl = memo(
           },
         ]);
         reload(attachments ? { experimental_attachments: attachments } : undefined);
+        streamingStartTime.set(Date.now());
         setFakeLoading(false);
         setInput('');
         Cookies.remove(PROMPT_COOKIE_KEY);
@@ -532,6 +633,9 @@ export const ChatImpl = memo(
       const modifiedFiles = workbenchStore.getModifiedFiles();
 
       chatStore.setKey('aborted', false);
+
+      // Track streaming start time for elapsed timer
+      streamingStartTime.set(Date.now());
 
       if (modifiedFiles !== undefined) {
         const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);

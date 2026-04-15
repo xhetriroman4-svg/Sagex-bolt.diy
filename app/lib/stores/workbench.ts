@@ -54,6 +54,9 @@ export class WorkbenchStore {
     import.meta.hot?.data.supabaseAlert ?? atom<SupabaseAlert | undefined>(undefined);
   deployAlert: WritableAtom<DeployAlert | undefined> =
     import.meta.hot?.data.deployAlert ?? atom<DeployAlert | undefined>(undefined);
+  // Self-healing: stores error context for auto-sending to AI
+  shellErrorForHealing: WritableAtom<ActionAlert | undefined> =
+    import.meta.hot?.data.shellErrorForHealing ?? atom<ActionAlert | undefined>(undefined);
   modifiedFiles = new Set<string>();
   artifactIdList: string[] = [];
   #globalExecutionQueue = Promise.resolve();
@@ -68,6 +71,7 @@ export class WorkbenchStore {
       import.meta.hot.data.actionAlert = this.actionAlert;
       import.meta.hot.data.supabaseAlert = this.supabaseAlert;
       import.meta.hot.data.deployAlert = this.deployAlert;
+      import.meta.hot.data.shellErrorForHealing = this.shellErrorForHealing;
 
       // Ensure binary files are properly preserved across hot reloads
       const filesMap = this.files.get();
@@ -133,6 +137,10 @@ export class WorkbenchStore {
   }
   clearAlert() {
     this.actionAlert.set(undefined);
+  }
+
+  clearShellErrorForHealing() {
+    this.shellErrorForHealing.set(undefined);
   }
 
   /**
@@ -550,6 +558,11 @@ export class WorkbenchStore {
           }
 
           this.actionAlert.set(alert);
+
+          // Self-healing: auto-populate error for AI when shell command fails
+          if (alert.source === 'terminal' && alert.isRecoverable && alert.command) {
+            this.shellErrorForHealing.set(alert);
+          }
         },
         (alert) => {
           if (this.#reloadedMessages.has(messageId)) {

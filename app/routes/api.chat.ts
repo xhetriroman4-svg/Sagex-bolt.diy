@@ -273,17 +273,21 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             const lastUserMessage = processedMessages.filter((x) => x.role == 'user').slice(-1)[0];
             const { model, provider } = extractPropertiesFromMessage(lastUserMessage);
             processedMessages.push({ id: generateId(), role: 'assistant', content });
-            processedMessages.push({
-              id: generateId(),
-              role: 'user',
-              content: `[Model: ${model}]\n\n[Provider: ${provider}]\n\n${CONTINUE_PROMPT}`,
-            });
 
             // Self-healing: check if the partial response contains action errors
             // and include error context so the AI can fix issues in the continuation
+            let continueContent = CONTINUE_PROMPT;
+
             if (content.includes('exitCode') || content.includes('error') || content.includes('failed')) {
               logger.info('Detected potential action errors in partial response - enabling self-healing context');
+              continueContent += `\n\n[Self-Healing Context] Your previous response may contain errors. Key observations from the end of your response:\n${content.slice(-3000)}\n\nIMPORTANT: If there were any failed commands above, analyze the error output and fix the issues. Re-run any failed commands to verify they work.`;
             }
+
+            processedMessages.push({
+              id: generateId(),
+              role: 'user',
+              content: `[Model: ${model}]\n\n[Provider: ${provider}]\n\n${continueContent}`,
+            });
 
             const result = await streamText({
               messages: [...processedMessages],
