@@ -37,6 +37,7 @@ const RETRY_MAX_DELAY_MS = 10000;
 function getRetryDelay(attempt: number): number {
   const delay = Math.min(RETRY_BASE_DELAY_MS * Math.pow(2, attempt), RETRY_MAX_DELAY_MS);
   const jitter = Math.random() * delay * 0.3;
+
   return Math.round(delay + jitter);
 }
 
@@ -44,13 +45,20 @@ function getRetryDelay(attempt: number): number {
  * Check if an error is retryable
  */
 function isRetryableError(error: any): boolean {
-  if (!error) return false;
+  if (!error) {
+    return false;
+  }
 
   const message = error.message?.toLowerCase() || '';
   const status = error.statusCode || error.status;
 
   // Network errors
-  if (message.includes('network') || message.includes('timeout') || message.includes('econnreset') || message.includes('econnrefused')) {
+  if (
+    message.includes('network') ||
+    message.includes('timeout') ||
+    message.includes('econnreset') ||
+    message.includes('econnrefused')
+  ) {
     return true;
   }
 
@@ -84,8 +92,8 @@ function getFallbackProviders(
   currentProviderName: string,
   apiKeys: Record<string, string>,
   providerSettings: Record<string, IProviderSetting>,
-): Array<{ provider: typeof PROVIDER_LIST[0]; model: string }> {
-  const fallbacks: Array<{ provider: typeof PROVIDER_LIST[0]; model: string }> = [];
+): Array<{ provider: (typeof PROVIDER_LIST)[0]; model: string }> {
+  const fallbacks: Array<{ provider: (typeof PROVIDER_LIST)[0]; model: string }> = [];
 
   for (const provider of PROVIDER_LIST) {
     // Skip current provider
@@ -402,10 +410,13 @@ export async function streamText(props: {
     try {
       const result = await _streamText(streamParams);
       logger.info(`Successfully connected to ${provider.name}/${modelDetails.name} (attempt ${attempt + 1})`);
+
       return result;
     } catch (error: any) {
       lastError = error;
-      logger.warn(`API call to ${provider.name}/${modelDetails.name} failed (attempt ${attempt + 1}/${MAX_API_RETRIES}): ${error.message}`);
+      logger.warn(
+        `API call to ${provider.name}/${modelDetails.name} failed (attempt ${attempt + 1}/${MAX_API_RETRIES}): ${error.message}`,
+      );
 
       if (!isRetryableError(error) || attempt >= MAX_API_RETRIES - 1) {
         logger.error(`Non-retryable error or max retries reached for ${provider.name}: ${error.message}`);
@@ -422,7 +433,9 @@ export async function streamText(props: {
   // Attempt 2: Try fallback providers
   for (let i = 0; i < fallbackProviders.length; i++) {
     const fallback = fallbackProviders[i];
-    logger.info(`Trying fallback provider ${fallback.provider.name}/${fallback.model} (${i + 1}/${fallbackProviders.length})`);
+    logger.info(
+      `Trying fallback provider ${fallback.provider.name}/${fallback.model} (${i + 1}/${fallbackProviders.length})`,
+    );
 
     try {
       // Re-create stream params with fallback provider
@@ -438,6 +451,7 @@ export async function streamText(props: {
 
       const result = await _streamText(fallbackStreamParams);
       logger.info(`Successfully connected to fallback ${fallback.provider.name}/${fallback.model}`);
+
       return result;
     } catch (fallbackError: any) {
       lastError = fallbackError;
@@ -447,12 +461,11 @@ export async function streamText(props: {
 
   // All providers failed
   const errorMessage = lastError?.message || 'All API providers failed';
- const fallbackInfo = fallbackProviders.length > 0
-    ? ` Tried ${fallbackProviders.length} fallback provider(s).`
-    : ' No fallback providers configured.';
+  const fallbackInfo =
+    fallbackProviders.length > 0
+      ? ` Tried ${fallbackProviders.length} fallback provider(s).`
+      : ' No fallback providers configured.';
   logger.error(`${errorMessage}.${fallbackInfo}`);
 
-  throw new Error(
-    `${errorMessage}.${fallbackInfo} Please check your API keys, network connection, and try again.`,
-  );
+  throw new Error(`${errorMessage}.${fallbackInfo} Please check your API keys, network connection, and try again.`);
 }

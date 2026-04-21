@@ -54,6 +54,7 @@ export class WorkbenchStore {
     import.meta.hot?.data.supabaseAlert ?? atom<SupabaseAlert | undefined>(undefined);
   deployAlert: WritableAtom<DeployAlert | undefined> =
     import.meta.hot?.data.deployAlert ?? atom<DeployAlert | undefined>(undefined);
+
   // Self-healing: stores error context for auto-sending to AI
   shellErrorForHealing: WritableAtom<ActionAlert | undefined> =
     import.meta.hot?.data.shellErrorForHealing ?? atom<ActionAlert | undefined>(undefined);

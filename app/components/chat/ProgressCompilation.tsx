@@ -10,15 +10,24 @@ function formatTokenCount(count: number): string {
   if (count >= 1000) {
     return `${(count / 1000).toFixed(1)}k`;
   }
+
   return String(count);
 }
 
 function getElapsedTime(startTime: number): string {
-  if (!startTime) return '';
+  if (!startTime) {
+    return '';
+  }
+
   const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  if (elapsed < 60) return `${elapsed}s`;
+
+  if (elapsed < 60) {
+    return `${elapsed}s`;
+  }
+
   const mins = Math.floor(elapsed / 60);
   const secs = elapsed % 60;
+
   return `${mins}m ${secs}s`;
 }
 
@@ -32,16 +41,21 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
 
   // Update elapsed timer during streaming
   useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
+
     if (!isStreaming || !startTime) {
       setElapsed('');
-      return;
+    } else {
+      timer = setInterval(() => {
+        setElapsed(getElapsedTime(startTime));
+      }, 1000);
     }
 
-    const timer = setInterval(() => {
-      setElapsed(getElapsedTime(startTime));
-    }, 1000);
-
-    return () => clearInterval(timer);
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
   }, [isStreaming, startTime]);
 
   React.useEffect(() => {
@@ -121,7 +135,10 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
                 </>
               )}
               {usage.totalTokens > 0 && (
-                <span className="flex items-center gap-1" title={`Prompt: ${formatTokenCount(usage.promptTokens)} | Completion: ${formatTokenCount(usage.completionTokens)} | Total: ${formatTokenCount(usage.totalTokens)}`}>
+                <span
+                  className="flex items-center gap-1"
+                  title={`Prompt: ${formatTokenCount(usage.promptTokens)} | Completion: ${formatTokenCount(usage.completionTokens)} | Total: ${formatTokenCount(usage.totalTokens)}`}
+                >
                   <span className="i-ph:lightning" />
                   <span>{formatTokenCount(usage.completionTokens)} tokens</span>
                 </span>

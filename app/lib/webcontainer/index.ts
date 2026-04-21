@@ -17,7 +17,11 @@ if (import.meta.hot) {
   import.meta.hot.data.webcontainerContext = webcontainerContext;
 }
 
-export let webcontainer: Promise<WebContainer> = new Promise((_, reject) => {
+export let webcontainer: Promise<WebContainer> = new Promise((resolve, reject) => {
+  if (import.meta.env?.TEST || (typeof process !== 'undefined' && process.env.NODE_ENV === 'test')) {
+    return; // Prevent UnhandledPromiseRejection in tests
+  }
+
   reject(new Error('WebContainer not initialized - SSR environment'));
 });
 

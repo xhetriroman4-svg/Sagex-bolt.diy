@@ -1,21 +1,19 @@
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  FileCode, Check, XCircle, Loader2, Zap, Clock, ChevronDown, ChevronUp
-} from 'lucide-react';
+import { FileCode, Check, XCircle, Loader2, Zap, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import {
-  streamingSession, fileProgress, streamingSpeed, estimatedTimeRemaining,
-  showProgressBar, getProgressPercentage, formatProgress, getActiveFiles,
-  getCompletedFiles, getFailedFiles
+  streamingSession,
+  fileProgress,
+  showProgressBar,
+  getProgressPercentage,
+  formatProgress,
 } from '~/lib/stores/streaming-optimizer';
 import { formatTokenCount } from '~/lib/stores/token-tracker';
 
 export default function StreamingProgress() {
   const $session = useStore(streamingSession);
   const $show = useStore(showProgressBar);
-  const $speed = useStore(streamingSpeed);
-  const $eta = useStore(estimatedTimeRemaining);
   const $progress = fileProgress;
   const files = useStore($progress);
 
@@ -24,12 +22,11 @@ export default function StreamingProgress() {
   const progress = getProgressPercentage();
   const isActive = $session.status === 'streaming' || $session.status === 'processing';
   const progressText = formatProgress();
-  const activeFiles = getActiveFiles();
-  const completedFiles = getCompletedFiles();
-  const failedFiles = getFailedFiles();
   const fileList = Object.values(files);
 
-  if ($session.status === 'idle' || !$show) return null;
+  if ($session.status === 'idle' || !$show) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
@@ -52,9 +49,13 @@ export default function StreamingProgress() {
                   <XCircle className="w-3.5 h-3.5 text-red-400" />
                 )}
                 <span className="text-xs font-medium">
-                  {$session.status === 'streaming' ? 'Generating...' :
-                   $session.status === 'processing' ? 'Processing...' :
-                   $session.status === 'complete' ? 'Complete' : 'Error'}
+                  {$session.status === 'streaming'
+                    ? 'Generating...'
+                    : $session.status === 'processing'
+                      ? 'Processing...'
+                      : $session.status === 'complete'
+                        ? 'Complete'
+                        : 'Error'}
                 </span>
               </div>
               <span className="text-[11px] text-white/50 font-mono">{progressText}</span>
@@ -64,8 +65,11 @@ export default function StreamingProgress() {
             <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
               <motion.div
                 className={`h-full rounded-full transition-all ${
-                  $session.status === 'complete' ? 'bg-green-500' :
-                  $session.status === 'error' ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                  $session.status === 'complete'
+                    ? 'bg-green-500'
+                    : $session.status === 'error'
+                      ? 'bg-red-500'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-500'
                 }`}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
@@ -112,15 +116,9 @@ export default function StreamingProgress() {
                       {file.status === 'streaming' && (
                         <Loader2 className="w-3 h-3 text-blue-400 animate-spin shrink-0" />
                       )}
-                      {file.status === 'complete' && (
-                        <Check className="w-3 h-3 text-green-400 shrink-0" />
-                      )}
-                      {file.status === 'failed' && (
-                        <XCircle className="w-3 h-3 text-red-400 shrink-0" />
-                      )}
-                      {file.status === 'pending' && (
-                        <Clock className="w-3 h-3 text-white/20 shrink-0" />
-                      )}
+                      {file.status === 'complete' && <Check className="w-3 h-3 text-green-400 shrink-0" />}
+                      {file.status === 'failed' && <XCircle className="w-3 h-3 text-red-400 shrink-0" />}
+                      {file.status === 'pending' && <Clock className="w-3 h-3 text-white/20 shrink-0" />}
                       <span className={`truncate ${file.status === 'streaming' ? 'text-blue-300' : 'text-white/40'}`}>
                         {file.filePath.split('/').pop()}
                       </span>

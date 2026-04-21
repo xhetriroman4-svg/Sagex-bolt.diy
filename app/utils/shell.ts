@@ -487,7 +487,7 @@ export class BoltShell {
         return resp;
       }
 
-    // Check if we should retry the command
+      // Check if we should retry the command
       if (resp.exitCode !== 0 && retryCount < MAX_RETRY_ATTEMPTS && this.shouldRetryCommand(command, resp.output)) {
         logger.info(`Auto-retrying failed command (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})...`);
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
@@ -584,7 +584,9 @@ export class BoltShell {
         });
 
         resolve({
-          output: fullOutput || `Command timed out after ${this.#commandTimeout / 1000} seconds. The command was killed automatically. Try breaking the command into smaller steps or optimizing it.`,
+          output:
+            fullOutput ||
+            `Command timed out after ${this.#commandTimeout / 1000} seconds. The command was killed automatically. Try breaking the command into smaller steps or optimizing it.`,
           exitCode: -1,
         });
       }, this.#commandTimeout);

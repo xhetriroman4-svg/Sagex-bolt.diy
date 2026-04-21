@@ -124,8 +124,6 @@ export function endStreamingSession(status: 'complete' | 'error' = 'complete'): 
  * Register a file being created/updated
  */
 export function registerFileProgress(fileId: string, filePath: string): void {
-  const progress = fileProgress.get();
-
   fileProgress.setKey(fileId, {
     fileId,
     filePath,
@@ -148,12 +146,14 @@ export function registerFileProgress(fileId: string, filePath: string): void {
  */
 export function updateFileProgress(
   fileId: string,
-  updates: Partial<Pick<FileStreamingProgress, 'status' | 'bytesWritten' | 'totalBytes' | 'error'>>
+  updates: Partial<Pick<FileStreamingProgress, 'status' | 'bytesWritten' | 'totalBytes' | 'error'>>,
 ): void {
   const progress = fileProgress.get();
   const existing = progress[fileId];
 
-  if (!existing) return;
+  if (!existing) {
+    return;
+  }
 
   const updated = { ...existing, ...updates };
   fileProgress.setKey(fileId, updated);
@@ -239,14 +239,14 @@ export function getProgressPercentage(): number {
     return 0;
   }
 
-  const fileProgress_pct = (session.completedFiles / session.totalFiles) * 100;
+  const fileProgressPct = (session.completedFiles / session.totalFiles) * 100;
 
   if (session.estimatedTotalTokens > 0) {
     const tokenProgress = (session.consumedTokens / session.estimatedTotalTokens) * 100;
-    return Math.min(100, Math.round((fileProgress_pct * 0.4 + tokenProgress * 0.6)));
+    return Math.min(100, Math.round(fileProgressPct * 0.4 + tokenProgress * 0.6));
   }
 
-  return Math.round(fileProgress_pct);
+  return Math.round(fileProgressPct);
 }
 
 /**

@@ -73,7 +73,9 @@ export const Terminal = memo(
                 lastError: error instanceof Error ? error.message : 'Terminal initialization failed',
               });
             })
-            .catch(() => {});
+            .catch(() => {
+              /* noop */
+            });
 
           // Attempt recovery with exponential backoff
           let retryCount = 0;
@@ -100,7 +102,9 @@ export const Terminal = memo(
                         lastError: undefined,
                       });
                     })
-                    .catch(() => {});
+                    .catch(() => {
+                      /* noop */
+                    });
 
                   onTerminalReady?.(terminal);
                 } catch (retryError) {

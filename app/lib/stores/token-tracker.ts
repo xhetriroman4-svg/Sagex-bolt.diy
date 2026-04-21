@@ -279,6 +279,7 @@ export function getUsageStats(): {
   const contextWindowPercent = Math.round(((session.input + session.output) / contextWindowLimit) * 100);
 
   let suggestedAction = '';
+
   if (contextWindowPercent >= 90) {
     suggestedAction = 'Context window almost full. Start a new chat to avoid errors.';
   } else if (contextWindowPercent >= 75) {

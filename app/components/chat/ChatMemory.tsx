@@ -1,21 +1,33 @@
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Brain, Search, Trash2, Tag, Lightbulb, Settings, AlertTriangle,
-  Clock, MessageSquare, FileCode, ChevronRight, X, Sparkles, RotateCcw
+  Brain,
+  Search,
+  Trash2,
+  Lightbulb,
+  Settings,
+  AlertTriangle,
+  Clock,
+  MessageSquare,
+  FileCode,
+  Sparkles,
+  RotateCcw,
 } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
-  memories, contextUsage, showMemoryPanel, memorySearchQuery,
-  contextConfig, chatContexts, activeChatId, isAutoSummarizing,
-  getFilteredMemories, shouldAutoNewChat, deleteMemory,
-  getContextHandoff, updateContextConfig
+  memories,
+  contextUsage,
+  memorySearchQuery,
+  contextConfig,
+  chatContexts,
+  activeChatId,
+  isAutoSummarizing,
+  getFilteredMemories,
+  shouldAutoNewChat,
+  deleteMemory,
+  updateContextConfig,
 } from '~/lib/stores/chat-memory';
 import { formatTokenCount } from '~/lib/stores/token-tracker';
-import { createScopedLogger } from '~/utils/logger';
-import type { MemoryEntry } from '~/lib/stores/chat-memory';
-
-const logger = createScopedLogger('ChatMemory');
 
 const TYPE_ICONS: Record<string, typeof Lightbulb> = {
   decision: Lightbulb,
@@ -38,7 +50,6 @@ const TYPE_COLORS: Record<string, string> = {
 export default function ChatMemory() {
   const $memories = useStore(memories);
   const $usage = useStore(contextUsage);
-  const $show = useStore(showMemoryPanel);
   const $search = useStore(memorySearchQuery);
   const $config = useStore(contextConfig);
   const $contexts = useStore(chatContexts);
@@ -87,9 +98,7 @@ export default function ChatMemory() {
           />
         </div>
         <div className="flex items-center justify-between mt-1">
-          <span className="text-[9px] text-white/20">
-            Max: {formatTokenCount($config.maxContextTokens)}
-          </span>
+          <span className="text-[9px] text-white/20">Max: {formatTokenCount($config.maxContextTokens)}</span>
           {shouldNewChat && (
             <span className="flex items-center gap-1 text-[9px] text-red-400 animate-pulse">
               <AlertTriangle className="w-3 h-3" />
