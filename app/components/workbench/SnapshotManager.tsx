@@ -1,19 +1,39 @@
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Save, Download, Upload, Share2, Copy, Trash2, GitFork, Search,
-  Filter, ExternalLink, Clock, FileCode, Check, Tag, X
+  Save,
+  Download,
+  Upload,
+  Share2,
+  Trash2,
+  GitFork,
+  Search,
+  ExternalLink,
+  Clock,
+  FileCode,
+  Check,
+  Tag,
+  X,
 } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
 import {
-  sandboxSnapshots, selectedSnapshotId, snapshotSearchQuery, snapshotFilterTag,
-  saveSnapshot, loadSnapshot, forkSnapshot, deleteSnapshot,
-  generateShareLink, exportSnapshot, importSnapshot, exportSnapshotAsZip,
-  getFilteredSnapshots, updateSnapshotMeta
+  sandboxSnapshots,
+  selectedSnapshotId,
+  snapshotSearchQuery,
+  snapshotFilterTag,
+  saveSnapshot,
+  loadSnapshot,
+  forkSnapshot,
+  deleteSnapshot,
+  generateShareLink,
+  exportSnapshot,
+  importSnapshot,
+  exportSnapshotAsZip,
+  getFilteredSnapshots,
+  updateSnapshotMeta,
 } from '~/lib/stores/snapshots';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { createScopedLogger } from '~/utils/logger';
-import type { SandboxSnapshot } from '~/lib/stores/snapshots';
 import fileSaver from 'file-saver';
 
 const logger = createScopedLogger('SnapshotManager');
@@ -30,7 +50,6 @@ export default function SnapshotManager() {
   const [saveDescription, setSaveDescription] = useState('');
   const [saveTags, setSaveTags] = useState('');
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +77,7 @@ export default function SnapshotManager() {
 
   const handleLoad = useCallback((snapshotId: string) => {
     const files = loadSnapshot(snapshotId);
+
     if (files) {
       workbenchStore.setDocuments(files);
       logger.info('Snapshot loaded');
@@ -70,11 +90,10 @@ export default function SnapshotManager() {
 
   const handleShare = useCallback((snapshotId: string) => {
     const url = generateShareLink(snapshotId);
+
     if (url) {
       setShareUrl(url);
       navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
   }, []);
 
@@ -84,6 +103,7 @@ export default function SnapshotManager() {
 
   const handleExportJson = useCallback(async (snapshotId: string) => {
     const json = exportSnapshot(snapshotId);
+
     if (json) {
       const blob = new Blob([json], { type: 'application/json' });
       saveAs(blob, `snapshot-${snapshotId}.json`);
@@ -92,6 +112,7 @@ export default function SnapshotManager() {
 
   const handleExportZip = useCallback(async (snapshotId: string) => {
     const blob = await exportSnapshotAsZip(snapshotId);
+
     if (blob) {
       saveAs(blob, `snapshot-${snapshotId}.zip`);
     }
@@ -99,10 +120,14 @@ export default function SnapshotManager() {
 
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+
+    if (!file) {
+      return;
+    }
 
     try {
       const text = await file.text();
+
       if (file.name.endsWith('.json')) {
         await importSnapshot(text);
       }
@@ -110,23 +135,38 @@ export default function SnapshotManager() {
       logger.error('Failed to import snapshot:', error);
     }
 
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   }, []);
 
-  const handleRename = useCallback((snapshotId: string) => {
-    setEditingId(snapshotId);
-    const snap = $snapshots[snapshotId];
-    setEditName(snap?.name || '');
-  }, [$snapshots]);
+  const handleRename = useCallback(
+    (snapshotId: string) => {
+      setEditingId(snapshotId);
 
-  const handleSaveRename = useCallback(async (snapshotId: string) => {
-    await updateSnapshotMeta(snapshotId, { name: editName });
-    setEditingId(null);
-  }, [editName]);
+      const snap = $snapshots[snapshotId];
+      setEditName(snap?.name || '');
+    },
+    [$snapshots],
+  );
+
+  const handleSaveRename = useCallback(
+    async (snapshotId: string) => {
+      await updateSnapshotMeta(snapshotId, { name: editName });
+      setEditingId(null);
+    },
+    [editName],
+  );
 
   const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
@@ -142,13 +182,7 @@ export default function SnapshotManager() {
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            className="hidden"
-          />
+          <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
             className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
@@ -185,7 +219,9 @@ export default function SnapshotManager() {
         >
           <option value="">All Tags</option>
           {allTags.map((tag) => (
-            <option key={tag} value={tag}>{tag}</option>
+            <option key={tag} value={tag}>
+              {tag}
+            </option>
           ))}
         </select>
       </div>
@@ -223,10 +259,16 @@ export default function SnapshotManager() {
                 className="w-full text-xs bg-white/5 border border-white/10 rounded px-3 py-2 text-white placeholder:text-white/30 outline-none"
               />
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowSaveDialog(false)} className="text-xs text-white/50 hover:text-white px-3 py-1.5">
+                <button
+                  onClick={() => setShowSaveDialog(false)}
+                  className="text-xs text-white/50 hover:text-white px-3 py-1.5"
+                >
                   Cancel
                 </button>
-                <button onClick={handleSave} className="text-xs bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded transition-colors">
+                <button
+                  onClick={handleSave}
+                  className="text-xs bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded transition-colors"
+                >
                   Save Snapshot
                 </button>
               </div>
@@ -265,7 +307,9 @@ export default function SnapshotManager() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
               className={`rounded-lg border transition-colors ${
-                $selectedId === snapshot.id ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/10 bg-white/[0.02] hover:bg-white/5'
+                $selectedId === snapshot.id
+                  ? 'border-purple-500/50 bg-purple-500/10'
+                  : 'border-white/10 bg-white/[0.02] hover:bg-white/5'
               }`}
             >
               <div className="p-3">
@@ -277,7 +321,15 @@ export default function SnapshotManager() {
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         onBlur={() => handleSaveRename(snapshot.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveRename(snapshot.id); if (e.key === 'Escape') setEditingId(null); }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveRename(snapshot.id);
+                          }
+
+                          if (e.key === 'Escape') {
+                            setEditingId(null);
+                          }
+                        }}
                         className="flex-1 text-xs bg-white/10 border border-white/20 rounded px-2 py-1 text-white outline-none"
                         autoFocus
                       />
@@ -292,22 +344,46 @@ export default function SnapshotManager() {
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <button onClick={() => handleLoad(snapshot.id)} className="p-1 rounded hover:bg-white/10" title="Load">
+                    <button
+                      onClick={() => handleLoad(snapshot.id)}
+                      className="p-1 rounded hover:bg-white/10"
+                      title="Load"
+                    >
                       <ExternalLink className="w-3 h-3 text-blue-400" />
                     </button>
-                    <button onClick={() => handleFork(snapshot.id)} className="p-1 rounded hover:bg-white/10" title="Fork">
+                    <button
+                      onClick={() => handleFork(snapshot.id)}
+                      className="p-1 rounded hover:bg-white/10"
+                      title="Fork"
+                    >
                       <GitFork className="w-3 h-3 text-green-400" />
                     </button>
-                    <button onClick={() => handleShare(snapshot.id)} className="p-1 rounded hover:bg-white/10" title="Share">
+                    <button
+                      onClick={() => handleShare(snapshot.id)}
+                      className="p-1 rounded hover:bg-white/10"
+                      title="Share"
+                    >
                       <Share2 className="w-3 h-3 text-yellow-400" />
                     </button>
-                    <button onClick={() => handleExportJson(snapshot.id)} className="p-1 rounded hover:bg-white/10" title="Export JSON">
+                    <button
+                      onClick={() => handleExportJson(snapshot.id)}
+                      className="p-1 rounded hover:bg-white/10"
+                      title="Export JSON"
+                    >
                       <Download className="w-3 h-3 text-white/40" />
                     </button>
-                    <button onClick={() => handleExportZip(snapshot.id)} className="p-1 rounded hover:bg-white/10" title="Export ZIP">
+                    <button
+                      onClick={() => handleExportZip(snapshot.id)}
+                      className="p-1 rounded hover:bg-white/10"
+                      title="Export ZIP"
+                    >
                       <FileCode className="w-3 h-3 text-white/40" />
                     </button>
-                    <button onClick={() => handleDelete(snapshot.id)} className="p-1 rounded hover:bg-red-500/10" title="Delete">
+                    <button
+                      onClick={() => handleDelete(snapshot.id)}
+                      className="p-1 rounded hover:bg-red-500/10"
+                      title="Delete"
+                    >
                       <Trash2 className="w-3 h-3 text-red-400/60 hover:text-red-400" />
                     </button>
                   </div>
@@ -320,7 +396,8 @@ export default function SnapshotManager() {
                 <div className="flex items-center gap-3 mt-2 text-[10px] text-white/30">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {new Date(snapshot.createdAt).toLocaleDateString()} {new Date(snapshot.createdAt).toLocaleTimeString()}
+                    {new Date(snapshot.createdAt).toLocaleDateString()}{' '}
+                    {new Date(snapshot.createdAt).toLocaleTimeString()}
                   </span>
                   <span>{snapshot.totalFiles} files</span>
                   <span>{formatSize(snapshot.totalSize)}</span>
@@ -329,15 +406,16 @@ export default function SnapshotManager() {
                       <Share2 className="w-3 h-3" /> {snapshot.shareCount}
                     </span>
                   )}
-                  {snapshot.forkedFrom && (
-                    <span className="text-purple-400">forked</span>
-                  )}
+                  {snapshot.forkedFrom && <span className="text-purple-400">forked</span>}
                 </div>
 
                 {snapshot.tags.length > 0 && (
                   <div className="flex gap-1 flex-wrap mt-1.5">
                     {snapshot.tags.map((tag) => (
-                      <span key={tag} className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/40">
+                      <span
+                        key={tag}
+                        className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/40"
+                      >
                         <Tag className="w-2 h-2" /> {tag}
                       </span>
                     ))}

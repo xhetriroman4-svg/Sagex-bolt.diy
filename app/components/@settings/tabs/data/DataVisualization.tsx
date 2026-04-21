@@ -34,7 +34,7 @@ export function DataVisualization({ chats }: DataVisualizationProps) {
     setIsDarkMode(isDark);
 
     if (!document.documentElement) {
-      return () => {};
+      return undefined;
     }
 
     const observer = new MutationObserver((mutations) => {

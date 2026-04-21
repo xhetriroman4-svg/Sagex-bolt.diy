@@ -219,45 +219,7 @@ const ERROR_PATTERNS: Array<{
   },
 ];
 
-// Command patterns that need pre-flight checks
-const COMMAND_PATTERNS: Array<{
-  pattern: RegExp;
-  checks: string[];
-  prepare?: (match: RegExpMatchArray) => string[];
-}> = [
-  // npm run
-  {
-    pattern: /^npm\s+(?:run\s+)?(\S+)/,
-    checks: ['package.json exists', 'script exists in package.json'],
-    prepare: (match) => [`cat package.json | grep -q '"${match[1]}"' || echo "Script ${match[1]} not found"`],
-  },
-
-  // npm install
-  {
-    pattern: /^npm\s+(?:i|install|add)(?:\s+(.+))?/,
-    checks: ['package.json exists'],
-    prepare: () => ['test -f package.json || echo "{}" > package.json'],
-  },
-
-  // npx commands
-  {
-    pattern: /^npx\s+(\S+)/,
-    checks: ['npm is available'],
-    prepare: () => [],
-  },
-
-  // Node.js execution
-  {
-    pattern: /^node\s+(\S+)/,
-    checks: ['file exists'],
-    prepare: (match) => [`test -f ${match[1]} || echo "File ${match[1]} not found"`],
-  },
-];
-
-/**
- * Analyze a command before execution
- */
-export function analyzeCommand(command: string, context?: ExecutionContext): CommandAnalysis {
+export function analyzeCommand(command: string, _context?: ExecutionContext): CommandAnalysis {
   const issues: string[] = [];
   const suggestions: string[] = [];
   const requiresDependencies: string[] = [];
@@ -338,7 +300,7 @@ export function analyzeError(command: string, output: string, exitCode: number):
   }
 
   // Try to match known error patterns
-  for (const { pattern, type, getFix } of ERROR_PATTERNS) {
+  for (const { pattern, getFix } of ERROR_PATTERNS) {
     const match = output.match(pattern);
 
     if (match) {
@@ -426,21 +388,6 @@ export async function prepareCommand(
     } catch (e) {
       logger.warn('Failed to check for node_modules:', e);
     }
-  }
-
-  // Add non-interactive flags to common commands
-  let modifiedCommand = command;
-
-  if (/npm\s+create\s+\S+(?!\s+--yes)/i.test(command)) {
-    modifiedCommand = command.replace(/(npm\s+create\s+\S+)/, '$1 -- --yes');
-  }
-
-  if (/^npx\s+(?!--yes)\S+/.test(command)) {
-    modifiedCommand = command.replace(/^npx\s+/, 'npx --yes ');
-  }
-
-  if (/^npm\s+(i|install)(?!\s+--)/.test(command)) {
-    modifiedCommand = command + ' --no-audit --no-fund';
   }
 
   return {

@@ -274,8 +274,10 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             const { model, provider } = extractPropertiesFromMessage(lastUserMessage);
             processedMessages.push({ id: generateId(), role: 'assistant', content });
 
-            // Self-healing: check if the partial response contains action errors
-            // and include error context so the AI can fix issues in the continuation
+            /*
+             * Self-healing: check if the partial response contains action errors
+             * and include error context so the AI can fix issues in the continuation
+             */
             let continueContent = CONTINUE_PROMPT;
 
             if (content.includes('exitCode') || content.includes('error') || content.includes('failed')) {

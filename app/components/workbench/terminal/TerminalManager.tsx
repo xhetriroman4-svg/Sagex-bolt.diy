@@ -128,6 +128,8 @@ export const TerminalManager = memo(({ terminal, isActive }: TerminalManagerProp
 
       return () => clearTimeout(focusTimeout);
     }
+
+    return undefined;
   }, [isActive, terminal]);
 
   // Health monitoring - periodic check

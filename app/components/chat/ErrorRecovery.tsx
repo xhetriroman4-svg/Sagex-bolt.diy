@@ -1,20 +1,18 @@
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  AlertTriangle, CheckCircle, XCircle, Wrench, Zap, Shield,
-  ChevronRight, ChevronDown, RefreshCw, X, Activity, Clock
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle, Wrench, Shield, ChevronRight, ChevronDown, X } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import {
-  errorEvents, activeErrorAlert, isAutoFixing, recoveryStats,
-  circuitState, webcontainerHealth, providerCircuitStates,
-  dismissErrorAlert, resolveError, getUnresolvedErrors,
-  formatCircuitState
+  activeErrorAlert,
+  isAutoFixing,
+  recoveryStats,
+  circuitState,
+  webcontainerHealth,
+  dismissErrorAlert,
+  resolveError,
+  getUnresolvedErrors,
+  formatCircuitState,
 } from '~/lib/runtime/error-recovery';
-import { createScopedLogger } from '~/utils/logger';
-import type { ErrorEvent, CircuitState } from '~/lib/runtime/error-recovery';
-
-const logger = createScopedLogger('ErrorRecovery');
 
 export default function ErrorRecovery() {
   const $activeAlert = useStore(activeErrorAlert);
@@ -22,10 +20,7 @@ export default function ErrorRecovery() {
   const $stats = useStore(recoveryStats);
   const $circuitState = useStore(circuitState);
   const $wcHealth = useStore(webcontainerHealth);
-  const $providerCircuits = useStore(providerCircuitStates);
-  const $errors = useStore(errorEvents);
 
-  const [showDetails, setShowDetails] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [expandedError, setExpandedError] = useState<string | null>(null);
 
@@ -40,8 +35,8 @@ export default function ErrorRecovery() {
     resolveError(errorId, 'Manually dismissed');
   }, []);
 
-  const healthColor = $wcHealth === 'healthy' ? 'text-green-400' :
-    $wcHealth === 'degraded' ? 'text-yellow-400' : 'text-red-400';
+  const healthColor =
+    $wcHealth === 'healthy' ? 'text-green-400' : $wcHealth === 'degraded' ? 'text-yellow-400' : 'text-red-400';
 
   return (
     <>
@@ -128,7 +123,9 @@ export default function ErrorRecovery() {
             className="flex items-center gap-2 text-xs text-white/50 hover:text-white/80 transition-colors"
           >
             <Shield className="w-3.5 h-3.5" />
-            <span>{unresolved.length} unresolved error{unresolved.length > 1 ? 's' : ''}</span>
+            <span>
+              {unresolved.length} unresolved error{unresolved.length > 1 ? 's' : ''}
+            </span>
             {showHistory ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
           </button>
 
@@ -141,15 +138,18 @@ export default function ErrorRecovery() {
 
           <div className="flex items-center gap-1.5 ml-auto">
             <span className={`text-[10px] ${circuitInfo.color}`}>{circuitInfo.label}</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${
-              $circuitState === 'closed' ? 'bg-green-400' :
-              $circuitState === 'open' ? 'bg-red-400' : 'bg-yellow-400 animate-pulse'
-            }`} />
+            <div
+              className={`w-1.5 h-1.5 rounded-full ${
+                $circuitState === 'closed'
+                  ? 'bg-green-400'
+                  : $circuitState === 'open'
+                    ? 'bg-red-400'
+                    : 'bg-yellow-400 animate-pulse'
+              }`}
+            />
           </div>
 
-          <span className={`text-[10px] ${healthColor}`}>
-            WC: {$wcHealth}
-          </span>
+          <span className={`text-[10px] ${healthColor}`}>WC: {$wcHealth}</span>
         </div>
       )}
 
@@ -176,11 +176,17 @@ export default function ErrorRecovery() {
                         onClick={() => setExpandedError(expandedError === error.id ? null : error.id)}
                         className="w-full px-4 py-2 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
                       >
-                        <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${
-                          error.severity === 'critical' ? 'text-red-400' :
-                          error.severity === 'high' ? 'text-orange-400' :
-                          error.severity === 'medium' ? 'text-yellow-400' : 'text-blue-400'
-                        }`} />
+                        <AlertTriangle
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            error.severity === 'critical'
+                              ? 'text-red-400'
+                              : error.severity === 'high'
+                                ? 'text-orange-400'
+                                : error.severity === 'medium'
+                                  ? 'text-yellow-400'
+                                  : 'text-blue-400'
+                          }`}
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs truncate">{error.message}</p>
                           <p className="text-[10px] text-white/30">
@@ -188,10 +194,12 @@ export default function ErrorRecovery() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          {error.autoFixSucceeded && (
-                            <CheckCircle className="w-3 h-3 text-green-400" />
+                          {error.autoFixSucceeded && <CheckCircle className="w-3 h-3 text-green-400" />}
+                          {expandedError === error.id ? (
+                            <ChevronDown className="w-3 h-3 text-white/20" />
+                          ) : (
+                            <ChevronRight className="w-3 h-3 text-white/20" />
                           )}
-                          {expandedError === error.id ? <ChevronDown className="w-3 h-3 text-white/20" /> : <ChevronRight className="w-3 h-3 text-white/20" />}
                         </div>
                       </button>
 

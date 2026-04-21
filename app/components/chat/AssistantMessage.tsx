@@ -84,7 +84,7 @@ interface TokenUsageDisplayProps {
   provider?: ProviderInfo;
 }
 
-const TokenUsageDisplay = memo(({ usage, model, provider }: TokenUsageDisplayProps) => {
+const TokenUsageDisplay = memo(({ usage, model, provider: _provider }: TokenUsageDisplayProps) => {
   // Get model info to find max context window
   const llmManager = LLMManager.getInstance();
   const modelList = llmManager.getModelList();

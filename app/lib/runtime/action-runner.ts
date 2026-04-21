@@ -129,7 +129,9 @@ export class ActionRunner {
    * Sort actions by priority: shell actions (npm install) first, then files, then start
    * Shell actions must run before file writes that import newly installed packages
    */
-  #prioritizeActions(actions: Array<{ data: ActionCallbackData; isStreaming: boolean }>): Array<{ data: ActionCallbackData; isStreaming: boolean }> {
+  #prioritizeActions(
+    actions: Array<{ data: ActionCallbackData; isStreaming: boolean }>,
+  ): Array<{ data: ActionCallbackData; isStreaming: boolean }> {
     return [...actions].sort((a, b) => {
       const priorityA = this.#getActionPriority(a.data.action);
       const priorityB = this.#getActionPriority(b.data.action);
@@ -158,6 +160,7 @@ export class ActionRunner {
         if (action.content.match(/npm\s+(install|i|add)|pnpm\s+add|yarn\s+add/)) {
           return 0;
         }
+
         // Other shell commands after dependency install but before file writes
         return 1;
       case 'supabase':
@@ -167,6 +170,7 @@ export class ActionRunner {
         if (action.filePath?.endsWith('package.json')) {
           return 0;
         }
+
         return 2;
       case 'start':
         return 3;
@@ -297,7 +301,11 @@ export class ActionRunner {
 
       const shellActions = prioritized.filter((a) => {
         const action = this.actions.get()[a.data.actionId];
-        return action && !action.executed && (a.data.action.type === 'shell' || a.data.action.type === 'supabase' || a.data.action.type === 'build');
+        return (
+          action &&
+          !action.executed &&
+          (a.data.action.type === 'shell' || a.data.action.type === 'supabase' || a.data.action.type === 'build')
+        );
       });
 
       const fileActions = prioritized.filter((a) => {

@@ -32,7 +32,6 @@ import McpTab from '~/components/@settings/tabs/mcp/McpTab';
 import CodeTemplatesTab from '~/components/@settings/tabs/templates/CodeTemplatesTab';
 import ShortcutsTab from '~/components/@settings/tabs/shortcuts/ShortcutsTab';
 import VersionHistory from '~/components/workbench/VersionHistory';
-import SnapshotManager from '~/components/workbench/SnapshotManager';
 import ApiTester from '~/components/workbench/ApiTester';
 import ChatMemory from '~/components/chat/ChatMemory';
 

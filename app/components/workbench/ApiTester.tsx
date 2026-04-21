@@ -1,21 +1,27 @@
 import { useStore } from '@nanostores/react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Send, Plus, Trash2, Copy, Clock, AlertCircle, CheckCircle,
-  ChevronDown, ChevronRight, History, BarChart3, Zap, Globe,
-  Save, FolderOpen, Settings, X, ArrowUpDown
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Send, Plus, Clock, AlertCircle, CheckCircle, BarChart3, Globe, X } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import {
-  apiRequests, apiResponses, isSendingRequest, activeRequestId, activeResponseId,
-  requestHistory, showHistory, historyFilter, apiEnvironments, activeEnvironmentId,
-  createRequest, updateRequest, deleteRequest, sendRequest, duplicateRequest,
-  switchEnvironment, createEnvironment, getFilteredHistory, getApiUsageAnalytics,
-  clearHistory
+  apiRequests,
+  apiResponses,
+  isSendingRequest,
+  activeRequestId,
+  activeResponseId,
+  requestHistory,
+  historyFilter,
+  apiEnvironments,
+  activeEnvironmentId,
+  createRequest,
+  updateRequest,
+  sendRequest,
+  switchEnvironment,
+  getFilteredHistory,
+  getApiUsageAnalytics,
+  clearHistory,
 } from '~/lib/stores/api-tester';
-import { workbenchStore } from '~/lib/stores/workbench';
 import { formatTokenCount } from '~/lib/stores/token-tracker';
-import type { HttpMethod, ApiRequest, ApiResponse, HistoryEntry } from '~/lib/stores/api-tester';
+import type { HttpMethod } from '~/lib/stores/api-tester';
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -43,7 +49,6 @@ export default function ApiTester() {
   const $activeReqId = useStore(activeRequestId);
   const $activeRespId = useStore(activeResponseId);
   const $history = useStore(requestHistory);
-  const $showHistory = useStore(showHistory);
   const $filter = useStore(historyFilter);
   const $envs = useStore(apiEnvironments);
   const $activeEnvId = useStore(activeEnvironmentId);
@@ -63,61 +68,95 @@ export default function ApiTester() {
   }, []);
 
   const handleSend = useCallback(async () => {
-    if (!$activeReqId) return;
+    if (!$activeReqId) {
+      return;
+    }
+
     await sendRequest($activeReqId);
     setActiveTab('response');
   }, [$activeReqId]);
 
-  const handleDuplicate = useCallback((reqId: string) => {
-    duplicateRequest(reqId);
-  }, []);
+  const handleMethodChange = useCallback(
+    (method: HttpMethod) => {
+      if (!$activeReqId) {
+        return;
+      }
 
-  const handleDelete = useCallback((reqId: string) => {
-    deleteRequest(reqId);
-  }, []);
+      updateRequest($activeReqId, { method });
+    },
+    [$activeReqId],
+  );
 
-  const handleMethodChange = useCallback((method: HttpMethod) => {
-    if (!$activeReqId) return;
-    updateRequest($activeReqId, { method });
-  }, [$activeReqId]);
+  const handleUrlChange = useCallback(
+    (url: string) => {
+      if (!$activeReqId) {
+        return;
+      }
 
-  const handleUrlChange = useCallback((url: string) => {
-    if (!$activeReqId) return;
-    updateRequest($activeReqId, { url });
-  }, [$activeReqId]);
+      updateRequest($activeReqId, { url });
+    },
+    [$activeReqId],
+  );
 
-  const handleBodyChange = useCallback((body: string) => {
-    if (!$activeReqId) return;
-    updateRequest($activeReqId, { body });
-  }, [$activeReqId]);
+  const handleBodyChange = useCallback(
+    (body: string) => {
+      if (!$activeReqId) {
+        return;
+      }
 
-  const handleHeaderChange = useCallback((index: number, field: 'key' | 'value', value: string) => {
-    if (!activeRequest) return;
-    const newHeaders = [...activeRequest.headers];
-    newHeaders[index] = { ...newHeaders[index], [field]: value };
-    updateRequest(activeRequest.id, { headers: newHeaders });
-  }, [activeRequest]);
+      updateRequest($activeReqId, { body });
+    },
+    [$activeReqId],
+  );
+
+  const handleHeaderChange = useCallback(
+    (index: number, field: 'key' | 'value', value: string) => {
+      if (!activeRequest) {
+        return;
+      }
+
+      const newHeaders = [...activeRequest.headers];
+      newHeaders[index] = { ...newHeaders[index], [field]: value };
+      updateRequest(activeRequest.id, { headers: newHeaders });
+    },
+    [activeRequest],
+  );
 
   const addHeader = useCallback(() => {
-    if (!activeRequest) return;
+    if (!activeRequest) {
+      return;
+    }
+
     updateRequest(activeRequest.id, {
       headers: [...activeRequest.headers, { key: '', value: '', enabled: true }],
     });
   }, [activeRequest]);
 
-  const removeHeader = useCallback((index: number) => {
-    if (!activeRequest) return;
-    const newHeaders = activeRequest.headers.filter((_, i) => i !== index);
-    updateRequest(activeRequest.id, { headers: newHeaders });
-  }, [activeRequest]);
+  const removeHeader = useCallback(
+    (index: number) => {
+      if (!activeRequest) {
+        return;
+      }
+
+      const newHeaders = activeRequest.headers.filter((_, i) => i !== index);
+      updateRequest(activeRequest.id, { headers: newHeaders });
+    },
+    [activeRequest],
+  );
 
   const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
     return `${(bytes / 1024).toFixed(1)} KB`;
   };
 
   const formatTime = (ms: number) => {
-    if (ms < 1000) return `${ms}ms`;
+    if (ms < 1000) {
+      return `${ms}ms`;
+    }
+
     return `${(ms / 1000).toFixed(2)}s`;
   };
 
@@ -137,10 +176,16 @@ export default function ApiTester() {
             className="text-[11px] bg-white/5 border border-white/10 rounded px-2 py-1 text-white outline-none"
           >
             {Object.values($envs).map((env) => (
-              <option key={env.id} value={env.id}>{env.name}</option>
+              <option key={env.id} value={env.id}>
+                {env.name}
+              </option>
             ))}
           </select>
-          <button onClick={handleNewRequest} className="p-1.5 rounded-md bg-cyan-600 hover:bg-cyan-500 transition-colors" title="New Request">
+          <button
+            onClick={handleNewRequest}
+            className="p-1.5 rounded-md bg-cyan-600 hover:bg-cyan-500 transition-colors"
+            title="New Request"
+          >
             <Plus className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -160,9 +205,7 @@ export default function ApiTester() {
             {activeTab === tab && (
               <motion.div layoutId="api-tab" className="absolute bottom-0 left-0 right-0 h-px bg-cyan-400" />
             )}
-            {tab === 'history' && (
-              <span className="ml-1 text-[9px] text-white/20">{Object.keys($history).length}</span>
-            )}
+            {tab === 'history' && <span className="ml-1 text-[9px] text-white/20">{Object.keys($history).length}</span>}
           </button>
         ))}
       </div>
@@ -180,7 +223,9 @@ export default function ApiTester() {
                 className={`text-xs font-bold bg-white/5 border border-white/10 rounded px-2 py-2 outline-none w-24 ${METHOD_COLORS[activeRequest.method]}`}
               >
                 {METHODS.map((m) => (
-                  <option key={m} value={m} className="text-white bg-[#1a1a2e]">{m}</option>
+                  <option key={m} value={m} className="text-white bg-[#1a1a2e]">
+                    {m}
+                  </option>
                 ))}
               </select>
               <input
@@ -261,7 +306,10 @@ export default function ApiTester() {
             <Globe className="w-12 h-12 mb-3 opacity-20" />
             <p>No request selected</p>
             <p className="mt-1">Create a new request or select from history</p>
-            <button onClick={handleNewRequest} className="mt-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-xs transition-colors">
+            <button
+              onClick={handleNewRequest}
+              className="mt-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-xs transition-colors"
+            >
               New Request
             </button>
           </div>
@@ -271,25 +319,35 @@ export default function ApiTester() {
         {activeTab === 'response' && activeResponse && (
           <div className="h-full flex flex-col">
             {/* Response Status Bar */}
-            <div className={`flex items-center justify-between px-4 py-2 border-b border-white/10 ${
-              activeResponse.status >= 200 && activeResponse.status < 300 ? 'bg-green-500/5' :
-              activeResponse.status >= 400 ? 'bg-red-500/5' : 'bg-white/5'
-            }`}>
+            <div
+              className={`flex items-center justify-between px-4 py-2 border-b border-white/10 ${
+                activeResponse.status >= 200 && activeResponse.status < 300
+                  ? 'bg-green-500/5'
+                  : activeResponse.status >= 400
+                    ? 'bg-red-500/5'
+                    : 'bg-white/5'
+              }`}
+            >
               <div className="flex items-center gap-3">
                 {activeResponse.error ? (
                   <AlertCircle className="w-4 h-4 text-red-400" />
                 ) : (
-                  <CheckCircle className={`w-4 h-4 ${activeResponse.status < 400 ? 'text-green-400' : 'text-red-400'}`} />
+                  <CheckCircle
+                    className={`w-4 h-4 ${activeResponse.status < 400 ? 'text-green-400' : 'text-red-400'}`}
+                  />
                 )}
-                <span className={`text-sm font-bold ${
-                  STATUS_COLORS[String(activeResponse.status)[0]] || 'text-white/40'
-                }`}>
+                <span
+                  className={`text-sm font-bold ${STATUS_COLORS[String(activeResponse.status)[0]] || 'text-white/40'}`}
+                >
                   {activeResponse.status || 'ERR'}
                 </span>
                 <span className="text-xs text-white/30">{activeResponse.statusText}</span>
               </div>
               <div className="flex items-center gap-3 text-[10px] text-white/30">
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatTime(activeResponse.responseTime)}</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {formatTime(activeResponse.responseTime)}
+                </span>
                 <span>{formatBytes(activeResponse.bodySize)}</span>
               </div>
             </div>
@@ -314,12 +372,15 @@ export default function ApiTester() {
                   <p className="text-sm text-red-400">{activeResponse.error}</p>
                 ) : (
                   <pre className="text-[11px] font-mono text-white/80 whitespace-pre-wrap break-all">
-                    {activeResponse.body ? (
-                      (() => {
-                        try { return JSON.stringify(JSON.parse(activeResponse.body), null, 2); }
-                        catch { return activeResponse.body; }
-                      })()
-                    ) : '(empty response)'}
+                    {activeResponse.body
+                      ? (() => {
+                          try {
+                            return JSON.stringify(JSON.parse(activeResponse.body), null, 2);
+                          } catch {
+                            return activeResponse.body;
+                          }
+                        })()
+                      : '(empty response)'}
                   </pre>
                 )
               ) : (
@@ -373,14 +434,16 @@ export default function ApiTester() {
                   <span className={`text-[11px] font-bold w-16 ${METHOD_COLORS[entry.request.method]}`}>
                     {entry.request.method}
                   </span>
-                  <span className="text-[11px] font-mono truncate flex-1 text-white/60">
-                    {entry.request.url}
-                  </span>
-                  <span className={`text-[11px] font-bold ${STATUS_COLORS[String(entry.response.status)[0]] || 'text-white/40'}`}>
+                  <span className="text-[11px] font-mono truncate flex-1 text-white/60">{entry.request.url}</span>
+                  <span
+                    className={`text-[11px] font-bold ${STATUS_COLORS[String(entry.response.status)[0]] || 'text-white/40'}`}
+                  >
                     {entry.response.status || 'ERR'}
                   </span>
                   <span className="text-[10px] text-white/20">{formatTime(entry.response.responseTime)}</span>
-                  <span className="text-[10px] text-white/15">{new Date(entry.response.timestamp).toLocaleTimeString()}</span>
+                  <span className="text-[10px] text-white/15">
+                    {new Date(entry.response.timestamp).toLocaleTimeString()}
+                  </span>
                 </button>
               ))}
               {filteredHistory.length === 0 && (
@@ -409,7 +472,9 @@ export default function ApiTester() {
               </div>
               <div className="bg-white/5 rounded-lg p-3 border border-white/10">
                 <div className="text-[10px] text-white/30">Success Rate</div>
-                <div className={`text-lg font-bold ${analytics.successRate >= 80 ? 'text-green-400' : analytics.successRate >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                <div
+                  className={`text-lg font-bold ${analytics.successRate >= 80 ? 'text-green-400' : analytics.successRate >= 50 ? 'text-yellow-400' : 'text-red-400'}`}
+                >
                   {analytics.successRate}%
                 </div>
               </div>
@@ -434,7 +499,9 @@ export default function ApiTester() {
                     .sort((a, b) => b[1] - a[1])
                     .map(([method, count]) => (
                       <div key={method} className="flex items-center gap-2">
-                        <span className={`text-[11px] font-bold w-16 ${METHOD_COLORS[method as HttpMethod] || 'text-white/40'}`}>
+                        <span
+                          className={`text-[11px] font-bold w-16 ${METHOD_COLORS[method as HttpMethod] || 'text-white/40'}`}
+                        >
                           {method}
                         </span>
                         <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -456,9 +523,7 @@ export default function ApiTester() {
                 <div className="flex gap-2">
                   {Object.entries(analytics.byStatusRange).map(([range, count]) => (
                     <div key={range} className="flex-1 text-center bg-white/5 rounded-lg p-2">
-                      <div className={`text-xs font-bold ${STATUS_COLORS[range[0]] || 'text-white/40'}`}>
-                        {count}
-                      </div>
+                      <div className={`text-xs font-bold ${STATUS_COLORS[range[0]] || 'text-white/40'}`}>{count}</div>
                       <div className="text-[9px] text-white/30">{range}</div>
                     </div>
                   ))}

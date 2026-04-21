@@ -213,13 +213,17 @@ export const ChatImpl = memo(
         return;
       }
 
-      let cumulativeUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      const cumulativeUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
       for (const message of messages) {
         if (message.annotations && Array.isArray(message.annotations)) {
           for (const annotation of message.annotations) {
             if (typeof annotation === 'object' && annotation !== null) {
-              const ann = annotation as { type?: string; value?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } };
+              const ann = annotation as {
+                type?: string;
+                value?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
+              };
+
               if (ann.type === 'usage' && ann.value) {
                 cumulativeUsage.promptTokens += ann.value.promptTokens || 0;
                 cumulativeUsage.completionTokens += ann.value.completionTokens || 0;
@@ -258,13 +262,14 @@ export const ChatImpl = memo(
 
     useEffect(() => {
       if (!shellErrorForHealing || isLoading) {
-        return;
+        return undefined;
       }
 
       // Prevent duplicate healing for the same error
       const errorKey = `${shellErrorForHealing.command}:${shellErrorForHealing.description}`;
+
       if (errorKey === lastHealedErrorRef.current) {
-        return;
+        return undefined;
       }
 
       lastHealedErrorRef.current = errorKey;

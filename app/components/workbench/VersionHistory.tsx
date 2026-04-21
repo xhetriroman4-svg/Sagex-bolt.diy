@@ -1,20 +1,36 @@
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  GitBranch, GitCommit, Clock, Tag, Plus, RotateCcw, Trash2,
-  ChevronRight, ChevronDown, GitMerge, Play, Copy, Check
+  GitBranch,
+  GitCommit,
+  Clock,
+  Tag,
+  Plus,
+  RotateCcw,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  GitMerge,
+  Play,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import {
-  timelineEntries, currentBranch, isTimeTraveling, currentSnapshotId,
-  snapshots, branches,
-  createBranch, switchBranch, restoreSnapshot, exitTimeTravel,
-  deleteSnapshot, renameSnapshot, addTag, removeTag, getSnapshotDiff
+  timelineEntries,
+  currentBranch,
+  isTimeTraveling,
+  currentSnapshotId,
+  snapshots,
+  branches,
+  createBranch,
+  switchBranch,
+  restoreSnapshot,
+  exitTimeTravel,
+  deleteSnapshot,
+  removeTag,
+  getSnapshotDiff,
 } from '~/lib/stores/version-history';
-import { createScopedLogger } from '~/utils/logger';
-import type { TimelineEntry, VersionSnapshot } from '~/lib/stores/version-history';
-
-const logger = createScopedLogger('VersionHistory');
 
 export default function VersionHistory() {
   const $timeline = useStore(timelineEntries);
@@ -57,14 +73,20 @@ export default function VersionHistory() {
     setTimeout(() => setCopiedId(null), 2000);
   }, []);
 
-  const getDiff = useCallback((snapshotId: string) => {
-    const snap = $snapshots[snapshotId];
-    if (!snap?.parentId) return null;
-    return getSnapshotDiff(snap.parentId, snapshotId);
-  }, [$snapshots]);
+  const getDiff = useCallback(
+    (snapshotId: string) => {
+      const snap = $snapshots[snapshotId];
+
+      if (!snap?.parentId) {
+        return null;
+      }
+
+      return getSnapshotDiff(snap.parentId, snapshotId);
+    },
+    [$snapshots],
+  );
 
   const branchList = Object.values($branches);
-  const currentBranchData = $branches[$currentBranch];
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0f] text-white">
@@ -88,7 +110,9 @@ export default function VersionHistory() {
             className="text-xs bg-white/5 border border-white/10 rounded px-2 py-1 text-white outline-none"
           >
             {branchList.map((b) => (
-              <option key={b.name} value={b.name}>{b.name}</option>
+              <option key={b.name} value={b.name}>
+                {b.name}
+              </option>
             ))}
           </select>
         </div>
@@ -179,9 +203,11 @@ export default function VersionHistory() {
                   className="relative pl-8 pb-3"
                 >
                   {/* Timeline dot */}
-                  <div className={`absolute left-0 top-1.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center z-10 ${
-                    isCurrent ? 'border-yellow-400 bg-yellow-400/20' : 'border-white/20 bg-[#0a0a0f]'
-                  }`}>
+                  <div
+                    className={`absolute left-0 top-1.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center z-10 ${
+                      isCurrent ? 'border-yellow-400 bg-yellow-400/20' : 'border-white/20 bg-[#0a0a0f]'
+                    }`}
+                  >
                     {isCurrent && <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />}
                   </div>
 
@@ -212,7 +238,11 @@ export default function VersionHistory() {
                         <span className="text-[10px] text-white/30">
                           {new Date(entry.timestamp).toLocaleTimeString()}
                         </span>
-                        {isExpanded ? <ChevronDown className="w-3 h-3 text-white/30" /> : <ChevronRight className="w-3 h-3 text-white/30" />}
+                        {isExpanded ? (
+                          <ChevronDown className="w-3 h-3 text-white/30" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3 text-white/30" />
+                        )}
                       </div>
                     </div>
                     {entry.description && (
@@ -232,7 +262,10 @@ export default function VersionHistory() {
                         <div className="mt-1 p-2 rounded-lg bg-white/5 border border-white/10 space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-white/40 font-mono">{entry.id}</span>
-                            <button onClick={() => handleCopySnapshotId(entry.id)} className="text-white/30 hover:text-white/60">
+                            <button
+                              onClick={() => handleCopySnapshotId(entry.id)}
+                              className="text-white/30 hover:text-white/60"
+                            >
                               {copiedId === entry.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                             </button>
                           </div>
@@ -262,19 +295,28 @@ export default function VersionHistory() {
                               {diff.added.length > 0 && (
                                 <div className="text-green-400">
                                   <span className="font-bold">+ Added ({diff.added.length}):</span>
-                                  <div className="pl-2">{diff.added.slice(0, 5).join(', ')}{diff.added.length > 5 ? '...' : ''}</div>
+                                  <div className="pl-2">
+                                    {diff.added.slice(0, 5).join(', ')}
+                                    {diff.added.length > 5 ? '...' : ''}
+                                  </div>
                                 </div>
                               )}
                               {diff.modified.length > 0 && (
                                 <div className="text-yellow-400">
                                   <span className="font-bold">~ Modified ({diff.modified.length}):</span>
-                                  <div className="pl-2">{diff.modified.slice(0, 5).join(', ')}{diff.modified.length > 5 ? '...' : ''}</div>
+                                  <div className="pl-2">
+                                    {diff.modified.slice(0, 5).join(', ')}
+                                    {diff.modified.length > 5 ? '...' : ''}
+                                  </div>
                                 </div>
                               )}
                               {diff.deleted.length > 0 && (
                                 <div className="text-red-400">
                                   <span className="font-bold">- Deleted ({diff.deleted.length}):</span>
-                                  <div className="pl-2">{diff.deleted.slice(0, 5).join(', ')}{diff.deleted.length > 5 ? '...' : ''}</div>
+                                  <div className="pl-2">
+                                    {diff.deleted.slice(0, 5).join(', ')}
+                                    {diff.deleted.length > 5 ? '...' : ''}
+                                  </div>
                                 </div>
                               )}
                               {diff.added.length === 0 && diff.modified.length === 0 && diff.deleted.length === 0 && (
@@ -285,9 +327,14 @@ export default function VersionHistory() {
                           {entry.tags.length > 0 && (
                             <div className="flex gap-1 flex-wrap">
                               {entry.tags.map((tag) => (
-                                <span key={tag} className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50">
+                                <span
+                                  key={tag}
+                                  className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50"
+                                >
                                   <Tag className="w-2.5 h-2.5" /> {tag}
-                                  <button onClick={() => removeTag(entry.id, tag)} className="hover:text-red-400">×</button>
+                                  <button onClick={() => removeTag(entry.id, tag)} className="hover:text-red-400">
+                                    ×
+                                  </button>
                                 </span>
                               ))}
                             </div>

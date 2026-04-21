@@ -154,7 +154,7 @@ export function recordError(params: {
  */
 export async function attemptAutoFix(
   errorId: string,
-  executeCommand: (command: string) => Promise<{ output?: string; exitCode: number }>
+  executeCommand: (command: string) => Promise<{ output?: string; exitCode: number }>,
 ): Promise<boolean> {
   const event = errorEvents.get()[errorId];
 
@@ -195,9 +195,10 @@ export async function attemptAutoFix(
       const stats = recoveryStats.get();
       const recoveryTime = (resolvedEvent.resolvedAt ?? resolvedEvent.timestamp) - resolvedEvent.timestamp;
       const totalResolved = stats.autoFixedErrors + 1;
-      const avgRecovery = stats.averageRecoveryTime > 0
-        ? (stats.averageRecoveryTime * stats.autoFixedErrors + recoveryTime) / totalResolved
-        : recoveryTime;
+      const avgRecovery =
+        stats.averageRecoveryTime > 0
+          ? (stats.averageRecoveryTime * stats.autoFixedErrors + recoveryTime) / totalResolved
+          : recoveryTime;
 
       recoveryStats.set({
         ...stats,
@@ -211,6 +212,7 @@ export async function attemptAutoFix(
       }
 
       logger.info(`Auto-fix succeeded for ${errorId}`);
+
       return true;
     }
 
@@ -221,14 +223,15 @@ export async function attemptAutoFix(
     });
 
     logger.warn(`Auto-fix failed for ${errorId}. Exit code: ${result.exitCode}`);
-    return false;
 
+    return false;
   } catch (error) {
     logger.error(`Auto-fix threw error for ${errorId}:`, error);
     errorEvents.setKey(errorId, {
       ...updatedEvent,
       autoFixSucceeded: false,
     });
+
     return false;
   } finally {
     isAutoFixing.set(false);
@@ -241,7 +244,9 @@ export async function attemptAutoFix(
 export function resolveError(errorId: string, resolution: string): void {
   const event = errorEvents.get()[errorId];
 
-  if (!event) return;
+  if (!event) {
+    return;
+  }
 
   const resolvedEvent: ErrorEvent = {
     ...event,
@@ -297,6 +302,7 @@ export function canExecute(provider: string): boolean {
       providerCircuitStates.setKey(provider, 'half-open');
       halfOpenAttempts[provider] = 0;
       logger.info(`Circuit breaker for ${provider} transitioning to half-open`);
+
       return true;
     }
 
@@ -401,7 +407,7 @@ export function updateWebContainerHealth(status: 'healthy' | 'degraded' | 'unhea
 export async function checkWebContainerHealth(
   webcontainer: { workdir: string } & Partial<{
     fs: { readdir: (path: string) => Promise<string[]> };
-  }>
+  }>,
 ): Promise<'healthy' | 'degraded' | 'unhealthy'> {
   try {
     if (!webcontainer.fs) {
@@ -411,6 +417,7 @@ export async function checkWebContainerHealth(
 
     const startTime = Date.now();
     await webcontainer.fs.readdir(webcontainer.workdir);
+
     const responseTime = Date.now() - startTime;
 
     if (responseTime > 5000) {
@@ -419,8 +426,9 @@ export async function checkWebContainerHealth(
     }
 
     updateWebContainerHealth('healthy');
+
     return 'healthy';
-  } catch (error) {
+  } catch {
     updateWebContainerHealth('unhealthy');
     return 'unhealthy';
   }
@@ -465,6 +473,7 @@ export function clearOldErrors(olderThanMs: number = 3600000): number {
   }
 
   logger.info(`Cleared ${cleared} old resolved errors`);
+
   return cleared;
 }
 
@@ -473,7 +482,10 @@ export function clearOldErrors(olderThanMs: number = 3600000): number {
  */
 export function getNextAutoFixableError(): ErrorEvent | null {
   const queue = pendingAutoFixQueue.get();
-  const unresolved = Object.values(queue).filter(Boolean).sort((a, b) => a.timestamp - b.timestamp);
+  const unresolved = Object.values(queue)
+    .filter(Boolean)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
   return unresolved[0] || null;
 }
 
